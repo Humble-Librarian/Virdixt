@@ -34,7 +34,7 @@
 
 ---
 
-## 1. Project Origin & Problem Statement
+## 1. Project Origin & Problem Statement 
 
 This project began as an **NLP university project** on **Financial Sentiment Analysis** using BERT or FinBERT with custom parameters.
 

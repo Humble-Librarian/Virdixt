@@ -1,0 +1,29 @@
+base: ProsusAI/finbert
+task: classifier
+modality: text
+backend: transformers
+
+data:
+  train: ./data/train.jsonl
+  format: auto
+  max_length: 128
+  val_split: 0.15
+
+training:
+  num_labels: 3
+  classifier_kind: single_label
+  label_names:
+    - negative
+    - neutral
+    - positive
+  epochs: 3
+  lr: 2e-5
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  scheduler: cosine
+  logging_steps: 10
+  save_steps: 50
+
+output: ./output

@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+output/
+tmp_a/
+tmp_b/
+*.zip
+.env

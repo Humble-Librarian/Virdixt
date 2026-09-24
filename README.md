@@ -12,6 +12,8 @@
 
 > Fine-tuned FinBERT for financial sentiment analysis (Positive / Negative / Neutral) augmented with **Laya Open-Weights System-1 Decision Primitives (Choice, Score, Noul)**, an **Automated Financial Advisor Engine**, a **Deterministic Chart-to-Table Vision Pipeline**, and a **Zero-Overhead C++ Inference Runtime** — built from first principles for Intel CPUs and NVIDIA GPUs.
 
+> 📖 **Teammate Guide:** For a file-by-file visual breakdown and interactive dependency map, see **[`ARCHITECTURE_WALKTHROUGH.md`](ARCHITECTURE_WALKTHROUGH.md)**.
+
 ---
 
 ## Table of Contents

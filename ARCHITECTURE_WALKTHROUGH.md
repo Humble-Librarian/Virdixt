@@ -1,7 +1,7 @@
 # 🧠 Virdixt: Complete Architecture & Codebase Walkthrough
 
 > **Welcome to the Virdixt Engine!**  
-> This guide is an interactive, visual walkthrough designed to help every teammate understand **what each file does**, **how data flows between modules**, and **how the entire system connects** from raw training data to real-time C++ inference and SAP action flags.
+> This guide is an interactive, visual walkthrough designed to help every teammate understand **what each file does**, **how data flows between modules**, and **how the entire system connects** from raw training data to real-time C++ inference and operational policy action flags.
 
 ---
 
@@ -33,8 +33,8 @@ flowchart TD
         PRUN -->|Dense Signal Sentences| BACKBONE[FinBERT ONNX Engine]
         ONNX_OUT -.->|Loads Model| BACKBONE
         BACKBONE -->|Calibrated Logits| LAYA[Laya System-1 Primitives]
-        LAYA -->|Choice, Score 0-100, Noul| ERP[ERP Advisor Engine]
-        ERP -->|Action Directives| SAP[SAP BAPI: FREEZE_PURCHASE_ORDERS / PROCEED]
+        LAYA -->|Choice, Score 0-100, Noul| ERP[ERP / Policy Advisor Engine]
+        ERP -->|Action Directives| ACT[Policy Action: FREEZE_PURCHASE_ORDERS / PROCEED]
     end
 
     style Offline_Training fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4
@@ -51,7 +51,7 @@ Here is what happens when a document containing text and a financial chart enter
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Client / SAP ERP
+    actor User as Client / Enterprise Application
     participant Pipe as vision/pipeline.py
     participant Vision as vision/chart_extractor.py & delta_calc.py
     participant Pruner as text_preprocessor / AnchorPruner
@@ -71,7 +71,7 @@ sequenceDiagram
     Laya->>Laya: Compute Score (0-100) & Noul Risk Probabilities (40ns)
     Laya-->>Advisor: LayaVerdict(Choice=NEGATIVE, Score=88.5, P_covenant=0.95)
     Advisor->>Advisor: Evaluate Asymmetric Risk Gate (>35% negative)
-    Advisor-->>User: SAPAction: FREEZE_PURCHASE_ORDERS (CRITICAL / TIER 4)
+    Advisor-->>User: PolicyAction: FREEZE_PURCHASE_ORDERS (CRITICAL / TIER 4)
 ```
 
 ---
@@ -169,7 +169,7 @@ sequenceDiagram
 * **What it does:** The complete Python runtime containing:
   1. **`AnchorTokenPruner`:** Regex pruner extracting dense signal sentences (0.1ms).
   2. **`LayaSystem1`:** Computes `Choice`, `Score` (0-100 distress index), and `Noul` binary risk hypotheses (`liquidity_distress`, `debt_covenant_breach_risk`, `growth_momentum`, `capital_return`).
-  3. **`FinancialAdvisor`:** Applies the **Asymmetric Risk Gate (35% threshold)** and outputs strict SAP action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`).
+  3. **`FinancialAdvisor`:** Applies the **Asymmetric Risk Gate (35% threshold)** and outputs strict operational action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`).
 * **Run command:** `python infer.py --test`
 
 ---
@@ -191,7 +191,7 @@ sequenceDiagram
 * **What it does:** C++ regex-based anchor token pruner. Compresses multi-page documents down to dense financial signal sentences before tokenization.
 
 ### 17. `cpp/include/erp_advisor.hpp`
-* **What it does:** Deterministic rule engine in C++ that maps Laya risk grades into formatted audit reports and SAP ERP flags.
+* **What it does:** Deterministic rule engine in C++ that maps Laya risk grades into formatted audit reports and operational policy flags.
 
 ### 18. `cpp/src/main.cpp` & `cpp/CMakeLists.txt`
 * **What it does:** C++ executable entry point with built-in test suite executing all 5 financial distress scenarios.
@@ -213,7 +213,7 @@ Use this matrix to understand what breaks if you edit a file:
 | `vision/delta_calculator.py`| Table strings | `vision/pipeline.py` | Changes mathematical delta phrasing |
 | `vision/pipeline.py` | `vision/*` | `infer.py` | Changes multimodal document ingestion |
 | `laya_primitives.hpp` | Raw logits | `main.cpp`, ERP Advisor | **Changes Laya score math & risk calibration** |
-| `infer.py` | `./output` or `.onnx` | End Users / SAP ERP | Main Python entry point for live decisions |
+| `infer.py` | `./output` or `.onnx` | End Users / Enterprise Systems | Main Python entry point for live decisions |
 
 ---
 

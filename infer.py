@@ -20,7 +20,7 @@ class ExposureTier(Enum):
     TIER_3_WARNING = "TIER_3_WARNING"
     TIER_4_BLOCKED = "TIER_4_BLOCKED"
 
-class SapActionFlag(Enum):
+class PolicyActionFlag(Enum):
     PROCEED_NORMAL = "PROCEED_NORMAL"
     FLAG_FOR_REVIEW = "FLAG_FOR_REVIEW"
     FREEZE_PURCHASE_ORDERS = "FREEZE_PURCHASE_ORDERS"
@@ -36,7 +36,7 @@ class NoulResult:
 class AdvisorResult:
     risk_grade: RiskGrade
     exposure_tier: ExposureTier
-    sap_action_flag: SapActionFlag
+    action_flag: PolicyActionFlag
     action_recommendations: List[str]
 
 class LayaSystem1:
@@ -151,27 +151,27 @@ class FinancialAdvisor:
         if score > 75 or neg_prob > 0.60:
             risk_grade = RiskGrade.CRITICAL
             exposure_tier = ExposureTier.TIER_4_BLOCKED
-            sap_action_flag = SapActionFlag.FREEZE_PURCHASE_ORDERS
+            action_flag = PolicyActionFlag.FREEZE_PURCHASE_ORDERS
             recs = ["IMMEDIATE: Freeze uncommitted purchase orders and discretionary capex.",
                     "CREDIT: Require 100% upfront cash or irrevocable letters of credit.",
                     "AUDIT: Request immediate debt covenant compliance certificate."]
         elif neg_prob > 0.35 or score > 40:
             risk_grade = RiskGrade.WARNING
             exposure_tier = ExposureTier.TIER_3_WARNING
-            sap_action_flag = SapActionFlag.FLAG_FOR_REVIEW
+            action_flag = PolicyActionFlag.FLAG_FOR_REVIEW
             recs = ["Review counterparty liquidity and cash burn rate", "Request updated covenant certificates"]
         elif score > 20:
             risk_grade = RiskGrade.MONITOR
             exposure_tier = ExposureTier.TIER_2_MONITOR
-            sap_action_flag = SapActionFlag.PROCEED_NORMAL
+            action_flag = PolicyActionFlag.PROCEED_NORMAL
             recs = ["Monitor upcoming quarterly performance filings"]
         else:
             risk_grade = RiskGrade.MINIMAL
             exposure_tier = ExposureTier.TIER_1_SAFE
-            sap_action_flag = SapActionFlag.PROCEED_NORMAL
+            action_flag = PolicyActionFlag.PROCEED_NORMAL
             recs = ["Counterparty healthy, proceed with standard commercial credit terms"]
             
-        return AdvisorResult(risk_grade, exposure_tier, sap_action_flag, recs)
+        return AdvisorResult(risk_grade, exposure_tier, action_flag, recs)
 
 def run_tests():
     from rich.console import Console
@@ -200,7 +200,7 @@ def run_tests():
         res = advisor.advise(tc)
         console.print(f"Risk Grade: [bold]{res.risk_grade.value}[/bold]")
         console.print(f"Exposure Tier: {res.exposure_tier.value}")
-        console.print(f"SAP Action Flag: {res.sap_action_flag.value}")
+        console.print(f"Policy Action Flag: {res.action_flag.value}")
         console.print(f"Recommendations: {', '.join(res.action_recommendations)}")
 
 if __name__ == "__main__":

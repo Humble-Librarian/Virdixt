@@ -21,7 +21,7 @@
 1. [Project Origin & Problem Statement](#1-project-origin--problem-statement)
 2. [Why FinBERT Instead of an LLM](#2-why-finbert-instead-of-an-llm)
 3. [Why Soup CLI Was Chosen](#3-why-soup-cli-was-chosen)
-4. [The SAP Data Challenge](#4-the-sap-data-challenge)
+4. [The Structured Data vs. Sentiment Challenge](#4-the-structured-data-vs-sentiment-challenge)
 5. [Dataset Selection & Why](#5-dataset-selection--why)
 6. [Hardware Constraints & Hardware Scaling (i5 to RTX 3050)](#6-hardware-constraints--hardware-scaling)
 7. [The 75% Problem — Root Cause Analysis](#7-the-75-problem--root-cause-analysis)
@@ -106,11 +106,11 @@ output: ./output
 
 ---
 
-## 4. The SAP Data Challenge
+## 4. The Structured Data vs. Sentiment Challenge
 
-The project's original data source was **SAP business objects** (Sales Orders, Purchase Documents). After analysis, a critical issue was identified:
+The project's original data inquiry evaluated **structured transactional business objects** (Sales Orders, Purchase Documents). After analysis, a critical issue was identified:
 
-**SAP transaction data is purely numerical and has no sentiment.**
+**Transactional data is purely numerical and has no sentiment.**
 
 ```json
 {
@@ -227,7 +227,7 @@ To find the optimal improvement strategy, we held a structured debate between tw
   Layer 2 : FinBERT + Laya Primitives: ~10ms (ONNX)
   Output  :
     -> RISK GRADE     : CRITICAL (TIER_4_BLOCKED)
-    -> SAP ACTION     : FREEZE_PURCHASE_ORDERS
+    -> POLICY ACTION  : FREEZE_PURCHASE_ORDERS
     -> ADVISOR ACTION : • IMMEDIATE: Freeze uncommitted purchase orders and discretionary capex.
                         • CREDIT: Require 100% upfront cash or irrevocable letters of credit.
                         • AUDIT: Request immediate debt covenant compliance certificate.
@@ -236,7 +236,7 @@ To find the optimal improvement strategy, we held a structured debate between tw
   Text    : "Organic ARR grew by 45% and EBITDA margin expanded significantly over the fiscal year."
   Output  :
     -> RISK GRADE     : MINIMAL (TIER_1_SAFE)
-    -> SAP ACTION     : PROCEED_NORMAL
+    -> POLICY ACTION  : PROCEED_NORMAL
     -> ADVISOR ACTION : • Counterparty healthy, proceed with standard commercial credit terms.
 ====================================================================================================
 ```
@@ -280,7 +280,7 @@ Located in [`cpp/`](file:///d:/Soup/cpp/), the native C++ engine provides zero-c
 - **`include/laya_primitives.hpp`**: Header-only SIMD implementation of Temperature Softmax ($T=1.25$), continuous Distress Score $[0, 100]$, and Noul sigmoid propositions.
 - **`include/inference_engine.hpp`**: ONNX Runtime C++ API wrapping Intel AVX2 and NVIDIA CUDA execution providers.
 - **`include/text_preprocessor.hpp`**: Fast regex-based anchor token pruner.
-- **`include/erp_advisor.hpp`**: Deterministic ERP policy engine mapping risk grades to SAP action flags.
+- **`include/erp_advisor.hpp`**: Deterministic enterprise policy engine mapping risk grades to operational action flags.
 
 ---
 
@@ -360,7 +360,7 @@ Virdixt/
 ├── 📄 export_onnx.py                 # ONNX + INT8 quantization exporter
 │
 ├── ── INFERENCE & VISION ───────────────
-├── 📄 infer.py                       # Laya System-1 Engine (Choice, Score, Noul) + SAP Advisor
+├── 📄 infer.py                       # Laya System-1 Engine (Choice, Score, Noul) + Decision Advisor
 ├── 📂 vision/
 │   ├── 📄 chart_detector.py          # Florence-2 chart classifier
 │   ├── 📄 chart_extractor.py         # DePlot chart-to-table parser

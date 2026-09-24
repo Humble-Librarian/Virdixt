@@ -6,7 +6,7 @@
 
 enum class SentimentChoice { NEGATIVE = 0, NEUTRAL = 1, POSITIVE = 2 };
 enum class RiskGrade { MINIMAL, MONITOR, WARNING, CRITICAL };
-enum class SAPActionFlag { PROCEED_NORMAL, FLAG_FOR_REVIEW, FREEZE_PURCHASE_ORDERS };
+enum class PolicyActionFlag { PROCEED_NORMAL, FLAG_FOR_REVIEW, FREEZE_PURCHASE_ORDERS };
 
 struct NoulHypotheses {
     float liquidity_distress;
@@ -21,7 +21,7 @@ struct LayaVerdict {
     float distress_score;
     NoulHypotheses noul;
     RiskGrade risk_grade;
-    SAPActionFlag sap_action;
+    PolicyActionFlag action_flag;
     std::vector<std::string> action_recommendations;
 };
 
@@ -77,16 +77,16 @@ public:
         // Asymmetric risk gate (35% negative threshold triggers WARNING)
         if (p_neg > 0.60f || verdict.distress_score > 70.0f) {
             verdict.risk_grade = RiskGrade::CRITICAL;
-            verdict.sap_action = SAPActionFlag::FREEZE_PURCHASE_ORDERS;
+            verdict.action_flag = PolicyActionFlag::FREEZE_PURCHASE_ORDERS;
         } else if (p_neg > 0.35f || verdict.distress_score > 40.0f) {
             verdict.risk_grade = RiskGrade::WARNING;
-            verdict.sap_action = SAPActionFlag::FLAG_FOR_REVIEW;
+            verdict.action_flag = PolicyActionFlag::FLAG_FOR_REVIEW;
         } else if (p_neu > 0.50f || verdict.distress_score > 20.0f) {
             verdict.risk_grade = RiskGrade::MONITOR;
-            verdict.sap_action = SAPActionFlag::PROCEED_NORMAL;
+            verdict.action_flag = PolicyActionFlag::PROCEED_NORMAL;
         } else {
             verdict.risk_grade = RiskGrade::MINIMAL;
-            verdict.sap_action = SAPActionFlag::PROCEED_NORMAL;
+            verdict.action_flag = PolicyActionFlag::PROCEED_NORMAL;
         }
         
         return verdict;

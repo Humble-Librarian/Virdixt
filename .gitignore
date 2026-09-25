@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 *.pyo
 output/
+models/
+*.onnx
 tmp_a/
 tmp_b/
 *.zip

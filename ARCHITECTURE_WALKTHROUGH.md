@@ -117,7 +117,7 @@ sequenceDiagram
 ```
 
 ### 5. `soup.yaml`
-* **What it does:** Declarative fine-tuning configuration for the **Soup CLI** engine. Specifies `task: classifier`, base model `ProsusAI/finbert`, 3 labels, learning rate `2e-5`, batch size `32`, and 2 epochs.
+* **What it does:** Declarative fine-tuning configuration for the **Soup CLI** engine. Specifies `task: classifier`, base model `ProsusAI/finbert`, 3 labels, learning rate `2e-5`, batch size `4`, gradient accumulation `4`, and `3 epochs`.
 * **How to run:** `soup train --config soup.yaml`
 
 ### 6. `train.py`

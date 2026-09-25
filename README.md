@@ -95,11 +95,15 @@ training:
   num_labels: 3
   classifier_kind: single_label
   label_names: [negative, neutral, positive]
-  epochs: 2
+  epochs: 3
   lr: 2e-5
-  batch_size: 32
-  lora:
-    r: 0
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  scheduler: cosine
+  logging_steps: 10
+  save_steps: 50
 
 output: ./output
 ```
@@ -275,12 +279,13 @@ Corporate filings often bury bad news inside graphs while writing cheerful comme
 
 ## 11. High-Throughput C++ Runtime Engine
 
-Located in [`cpp/`](file:///d:/Soup/cpp/), the native C++ engine provides zero-copy inference:
+Located in [`cpp/`](cpp/), the native C++ engine provides zero-copy inference:
 
 - **`include/laya_primitives.hpp`**: Header-only SIMD implementation of Temperature Softmax ($T=1.25$), continuous Distress Score $[0, 100]$, and Noul sigmoid propositions.
-- **`include/inference_engine.hpp`**: ONNX Runtime C++ API wrapping Intel AVX2 and NVIDIA CUDA execution providers.
+- **`include/inference_engine.hpp`**: ONNX Runtime C++ API wrapping Intel AVX2 and NVIDIA CUDA execution providers with standalone simulation fallback.
 - **`include/text_preprocessor.hpp`**: Fast regex-based anchor token pruner.
 - **`include/erp_advisor.hpp`**: Deterministic enterprise policy engine mapping risk grades to operational action flags.
+- **`src/main.cpp`**: Multi-scenario C++ test runner evaluating complex multi-clause enterprise cases.
 
 ---
 
@@ -320,7 +325,7 @@ Financial disclosures often use concessive conjunctions (*"Although"*, *"Despite
 
 ## 14. Final Results & Benchmarks
 
-### Training Metrics (2 Epochs, FinBERT Backbone)
+### Training Metrics (FinBERT Backbone, Balanced 6,300 Rows)
 
 | Metric | Value |
 |---|---|

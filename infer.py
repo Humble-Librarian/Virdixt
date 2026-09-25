@@ -44,15 +44,24 @@ class LayaSystem1:
         self.use_onnx = use_onnx
         if use_onnx:
             import onnxruntime as ort
-            self.session = ort.InferenceSession(os.path.join(model_dir, "finbert.onnx"))
+            onnx_file = os.path.join(model_dir, "finbert.onnx") if not model_dir.endswith(".onnx") else model_dir
+            if not os.path.exists(onnx_file):
+                # Fallback to models/
+                if os.path.exists("models/finbert.onnx"):
+                    onnx_file = "models/finbert.onnx"
+                elif os.path.exists("models/finbert_quantized.onnx"):
+                    onnx_file = "models/finbert_quantized.onnx"
+            self.session = ort.InferenceSession(onnx_file)
             from transformers import AutoTokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
+            tok_path = model_dir if os.path.exists(os.path.join(model_dir, "tokenizer.json")) else "ProsusAI/finbert"
+            self.tokenizer = AutoTokenizer.from_pretrained(tok_path)
         else:
             import torch
             from transformers import AutoModelForSequenceClassification, AutoTokenizer
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            self.model = AutoModelForSequenceClassification.from_pretrained(model_dir).to(self.device)
-            self.tokenizer = AutoTokenizer.from_pretrained(model_dir)
+            resolved_dir = model_dir if os.path.exists(model_dir) else "ProsusAI/finbert"
+            self.model = AutoModelForSequenceClassification.from_pretrained(resolved_dir).to(self.device)
+            self.tokenizer = AutoTokenizer.from_pretrained(resolved_dir)
 
         self.id2label = getattr(self.model.config, "id2label", None) if not use_onnx else None
         # Normalize mapping: find indices for negative, neutral, positive
@@ -64,9 +73,12 @@ class LayaSystem1:
 
     def _get_logits(self, text: str):
         import torch
-        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=128)
         if self.use_onnx:
-            ort_inputs = {k: v.cpu().numpy() for k, v in inputs.items()}
+            ort_inputs = {
+                "input_ids": inputs["input_ids"].cpu().numpy(),
+                "attention_mask": inputs["attention_mask"].cpu().numpy()
+            }
             logits = self.session.run(None, ort_inputs)[0]
             return torch.tensor(logits)
         else:
@@ -142,7 +154,7 @@ class FinancialAdvisor:
         t_sys1 = time.time() - t1
         
         console.print(f"[dim]Layer 1 Pruning Time: {t_prune*1000:.2f}ms[/dim]")
-        console.print(f"[dim]Layer 2 System-1 Time: {t_sys1*1000:.2f}ms[/dim]")
+        console.print(f"[dim]Layer 2 System-1 Time: {t_sys1*1000:.2f}ms ({'ONNX' if self.system1.use_onnx else 'PyTorch'})[/dim]")
         
         # Asymmetric Risk Gate: 35% negative probability triggers WARNING
         p = self.system1.get_calibrated_probs(pruned_text)
@@ -173,7 +185,7 @@ class FinancialAdvisor:
             
         return AdvisorResult(risk_grade, exposure_tier, action_flag, recs)
 
-def run_tests():
+def run_tests(use_onnx: bool = False):
     from rich.console import Console
     console = Console()
     
@@ -186,10 +198,11 @@ def run_tests():
     ]
     
     try:
-        system1 = LayaSystem1("ProsusAI/finbert")
-    except Exception:
-        console.print("[red]Could not load FinBERT. Ensure transformers and torch are installed.[/red]")
-        return
+        model_path = "./output" if not use_onnx else "./models"
+        system1 = LayaSystem1(model_dir=model_path, use_onnx=use_onnx)
+    except Exception as e:
+        console.print(f"[red]Could not load FinBERT ({e}). Falling back to ProsusAI/finbert...[/red]")
+        system1 = LayaSystem1("ProsusAI/finbert", use_onnx=False)
         
     pruner = AnchorTokenPruner()
     advisor = FinancialAdvisor(system1, pruner)
@@ -207,9 +220,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--onnx", action="store_true", help="Use ONNX runtime")
     parser.add_argument("--test", action="store_true", help="Run hardcoded test cases")
+    parser.add_argument("--text", type=str, default="", help="Evaluate custom text string")
     args = parser.parse_args()
     
-    if args.test:
-        run_tests()
+    if args.text:
+        model_path = "./output" if not args.onnx else "./models"
+        system1 = LayaSystem1(model_dir=model_path, use_onnx=args.onnx)
+        pruner = AnchorTokenPruner()
+        advisor = FinancialAdvisor(system1, pruner)
+        res = advisor.advise(args.text)
+        print(f"Risk Grade: {res.risk_grade.value}")
+        print(f"Exposure Tier: {res.exposure_tier.value}")
+        print(f"Policy Action Flag: {res.action_flag.value}")
+        print(f"Recommendations: {', '.join(res.action_recommendations)}")
+    elif args.test:
+        run_tests(use_onnx=args.onnx)
     else:
-        print("Run with --test to execute test cases.")
+        print("Run with --test to execute test cases or --text 'your text' to evaluate.")

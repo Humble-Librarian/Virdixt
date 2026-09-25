@@ -101,10 +101,10 @@ def main():
             tokenize_func, batched=True, remove_columns=["text", "label"]
         )
 
-    # Training arguments tuned for 8GB RAM & CPU
+    # Training arguments tuned for 8GB RAM & CPU / GPU
     batch_size = 4
     gradient_accumulation_steps = 4  # Effective batch size = 16
-    epochs = 2  # 2 epochs is fast and reaches good convergence
+    epochs = 3  # 3 epochs for full convergence
 
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,

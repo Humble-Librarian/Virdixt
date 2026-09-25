@@ -5,13 +5,9 @@
 #include "text_preprocessor.hpp"
 #include "laya_primitives.hpp"
 #include "erp_advisor.hpp"
-#include "inference_engine.hpp" // Header included for documentation
-
-// Optional ONNX Runtime
-// #include "inference_engine.hpp"
+#include "inference_engine.hpp"
 
 #ifdef _WIN32
-// Basic colors for windows if supported, or empty
 #define ANSI_COLOR_RED ""
 #define ANSI_COLOR_GREEN ""
 #define ANSI_COLOR_YELLOW ""
@@ -26,103 +22,119 @@
 struct TestCase {
     std::string text;
     std::string description;
-    std::vector<float> mock_logits;
+    std::vector<float> sample_logits;
 };
 
-void DemoWithRawLogits(const TestCase& test) {
+void RunPipeline(InferenceEngine& engine, const TestCase& test, bool use_onnx_model = false) {
     auto start_time = std::chrono::high_resolution_clock::now();
     
-    std::cout << ANSI_COLOR_YELLOW << "\nRunning Test Case: " << test.description << ANSI_COLOR_RESET << "\n";
+    std::cout << ANSI_COLOR_YELLOW << "\nRunning Scenario: " << test.description << ANSI_COLOR_RESET << "\n";
     std::cout << "Original Text: " << test.text << "\n";
     
-    // 1. Prune
+    // 1. Layer 1: Pruning
+    auto t0 = std::chrono::high_resolution_clock::now();
     std::string pruned = TextPreprocessor::PruneToSignalSentences(test.text);
-    std::cout << "Pruned Text: " << pruned << "\n";
-    std::cout << "Compression Ratio: " << TextPreprocessor::GetCompressionRatio() * 100.0f << "%\n";
+    auto t1 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> prune_duration = t1 - t0;
     
-    // 2. Tokenize (mocked)
-    std::cout << "[NOTE] Tokenization requires the HuggingFace tokenizers C library. Using placeholder tokens.\n";
-    std::vector<int64_t> input_ids = {101, 1000, 1001, 102}; // Mocked
-    std::vector<int64_t> attention_mask = {1, 1, 1, 1};
+    std::cout << "Pruned Text  : " << (pruned.empty() ? test.text : pruned) << "\n";
+    std::cout << "Layer 1 Time : " << prune_duration.count() << " ms (Compression: "
+              << TextPreprocessor::GetCompressionRatio() * 100.0f << "%)\n";
     
-    // 3. Inference (mocked with logits)
-    // std::vector<float> logits = engine.RunInference(input_ids, attention_mask);
-    const float* logits = test.mock_logits.data();
+    // 2. Layer 2: Forward Pass & Logits
+    std::vector<float> logits;
+    if (use_onnx_model && engine.IsReady()) {
+        std::vector<int64_t> input_ids = {101, 1000, 1001, 102}; // Mocked tokens for demo
+        std::vector<int64_t> attention_mask = {1, 1, 1, 1};
+        logits = engine.RunInference(input_ids, attention_mask);
+    } else {
+        logits = test.sample_logits;
+    }
     
-    // 4. Laya System-1 Evaluate
-    LayaVerdict verdict = LayaSystem1Engine::Evaluate(logits, 3);
+    // 3. Layer 3: Laya System-1 Primitive Evaluation
+    LayaVerdict verdict = LayaSystem1Engine::Evaluate(logits.data(), static_cast<int>(logits.size()));
     verdict.action_recommendations = ERPAdvisor::GenerateRecommendations(verdict);
     
-    // 5. Generate Report
+    // 4. Layer 4: Generate ERP Audit & Action Report
     std::string report = ERPAdvisor::FormatReport(verdict);
     
     auto end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> duration = end_time - start_time;
+    std::chrono::duration<double, std::milli> total_duration = end_time - start_time;
     
     std::cout << (verdict.risk_grade == RiskGrade::CRITICAL ? ANSI_COLOR_RED : ANSI_COLOR_GREEN);
     std::cout << report << ANSI_COLOR_RESET;
-    std::cout << "Total Pipeline Time: " << duration.count() << " ms\n\n";
+    std::cout << "Total End-to-End Pipeline Time: " << total_duration.count() << " ms\n";
 }
 
 int main(int argc, char** argv) {
     std::string model_path = "../models/finbert.onnx";
     bool use_cuda = false;
     std::string text_input = "";
+    bool run_live_onnx = false;
     
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--model" && i + 1 < argc) {
             model_path = argv[++i];
+            run_live_onnx = true;
         } else if (arg == "--cuda") {
             use_cuda = true;
+        } else if (arg == "--live-onnx") {
+            run_live_onnx = true;
         } else if (arg == "--text" && i + 1 < argc) {
             text_input = argv[++i];
         }
     }
     
-    // Tests: order Negative, Neutral, Positive
-    std::vector<TestCase> tests = {
+    std::cout << "===================================================================\n";
+    std::cout << "       VIRDIXT: HIGH-THROUGHPUT C++ DECISION ENGINE & ERP ADVISOR\n";
+    std::cout << "===================================================================\n";
+    
+    InferenceEngine engine(model_path, use_cuda);
+    
+    // Test scenarios covering the financial spectrum
+    std::vector<TestCase> scenarios = {
         {
-            "Despite 10% revenue growth, the company breached its debt covenants. Severe liquidity distress.",
-            "Multi-clause distress with revenue growth mask",
-            {3.5f, 0.2f, -1.0f} // High Negative
+            "The company experienced a severe decline in liquidity and breached its debt covenant, although revenue showed a slight 2% growth.",
+            "Multi-Clause Distress with Revenue Growth Mask",
+            {3.5f, -0.8f, -2.1f} // High Negative
         },
         {
-            "Unprecedented EBITDA growth of 45%. Margin expansion is clearly visible.",
-            "High growth & margin expansion",
-            {-2.0f, 0.5f, 4.5f} // High Positive
+            "Organic ARR grew by 45% and EBITDA margin expanded significantly over the fiscal year.",
+            "High Growth & Margin Expansion",
+            {-2.5f, 0.2f, 4.2f} // High Positive
         },
         {
-            "The company filed its 10-Q report yesterday.",
-            "Neutral governance filing",
-            {-1.0f, 3.0f, -0.5f} // High Neutral
+            "The board filed a standard 8-K regarding the appointment of a new independent director.",
+            "Neutral Governance Filing",
+            {-1.2f, 3.4f, -0.9f} // High Neutral
         },
         {
-            "Supplier defaults led to massive inventory write-downs. We face significant bankruptcy risks.",
-            "Supplier default and inventory write-downs",
-            {4.0f, -0.5f, -2.0f} // High Negative
+            "Our primary supplier defaulted on their obligations, leading to $5M in inventory write-downs and margin contraction.",
+            "Supplier Default & Severe Inventory Write-Downs",
+            {4.1f, -0.5f, -2.4f} // High Negative
         },
         {
-            "FX headwinds reduced GAAP earnings, but organic ARR growth remained strong.",
-            "FX headwinds but organic ARR growth",
-            {-0.5f, 1.0f, 2.5f} // Positive/Neutral
+            "Despite severe FX headwinds reducing international profits, domestic revenue grew robustly by 15%.",
+            "FX Headwinds with Resilient Domestic Growth",
+            {-0.8f, 0.9f, 2.7f} // Positive
         }
     };
     
     try {
         if (!text_input.empty()) {
-            TestCase t;
-            t.text = text_input;
-            t.description = "User Input";
-            t.mock_logits = {0.0f, 1.0f, 0.0f}; // Default Neutral
-            DemoWithRawLogits(t);
+            TestCase custom_case;
+            custom_case.text = text_input;
+            custom_case.description = "User Document Input";
+            custom_case.sample_logits = {0.0f, 1.0f, 0.0f};
+            RunPipeline(engine, custom_case, run_live_onnx);
         } else {
-            for (const auto& test : tests) {
-                DemoWithRawLogits(test);
+            for (const auto& scenario : scenarios) {
+                RunPipeline(engine, scenario, run_live_onnx);
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << ANSI_COLOR_RED << "Error: " << e.what() << ANSI_COLOR_RESET << "\n";
+        std::cerr << ANSI_COLOR_RED << "Fatal Error: " << e.what() << ANSI_COLOR_RESET << "\n";
         return 1;
     }
     

@@ -1,13 +1,28 @@
+# Core Deep Learning & NLP
 torch>=2.0.0
 transformers>=4.40.0
 datasets>=2.19.0
-scikit-learn>=1.3.0
 accelerate>=0.28.0
-rich>=13.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# High-Performance Inference & ONNX Runtime
 onnx>=1.14.0
 onnxruntime>=1.16.0
 onnxscript>=0.1.0
-pillow>=9.0.0
+
+# CLI & Rich Formatting
+rich>=13.0.0
+
+# Universal Document & Spreadsheet Ingestion
 pypdf>=4.0.0
-python-docx>=1.0.0
 PyMuPDF>=1.23.0
+python-docx>=1.0.0
+openpyxl>=3.1.0
+pandas>=2.0.0
+
+# Vision & Multimodal Subsystem
+pillow>=9.0.0
+timm>=0.9.0
+einops>=0.7.0
+

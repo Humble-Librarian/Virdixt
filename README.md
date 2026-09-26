@@ -108,9 +108,16 @@ python export_onnx.py --quantize
 
 ## ⚡ Inference & Usage Modes
 
-### Mode 1: Single File Document Audit (PDF, DOCX, TXT)
-Ingest and analyze any unstructured financial report:
+### Mode 1: Single File Document Audit (PDF, DOCX, CSV, Excel, TXT)
+Ingest and analyze any financial document, unstructured text filing, or structured spreadsheet:
 ```bash
+# Analyze a CSV spreadsheet (Narrative Audit Log or Pure Numbers):
+python infer.py --file data/sample_reports/narrative_audit_log.csv
+python infer.py --file data/sample_reports/pure_numerical_distress.csv
+
+# Analyze an Excel workbook (.xlsx / .xls):
+python infer.py --file data/sample_reports/corporate_filing.xlsx
+
 # Analyze a PDF filing:
 python infer.py --file data/sample_reports/covenant_breach.pdf
 
@@ -125,7 +132,7 @@ python infer.py --file data/sample_reports/multimodal_report.docx
 ```
 
 ### Mode 2: Multi-Document Batch Directory Audit
-Process an entire directory of mixed `.pdf`, `.docx`, and `.txt` files in a single warm session:
+Process an entire directory of mixed `.pdf`, `.docx`, `.csv`, `.xlsx`, and `.txt` files in a single warm session:
 ```bash
 python infer.py --batch data/sample_reports/
 ```

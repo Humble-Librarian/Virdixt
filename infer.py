@@ -104,17 +104,19 @@ class LayaSystem1:
             self.session = ort.InferenceSession(onnx_file, sess_options)
 
             from transformers import AutoTokenizer
-            tok_path = self.model_dir if os.path.exists(os.path.join(self.model_dir, "tokenizer.json")) else "ProsusAI/finbert"
-            self.tokenizer = AutoTokenizer.from_pretrained(tok_path)
+            tok_path = self.model_dir if os.path.exists(os.path.join(self.model_dir, "tokenizer.json")) else ("models" if os.path.exists("models/tokenizer.json") else "ProsusAI/finbert")
+            is_local = os.path.exists(tok_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(tok_path, local_files_only=is_local)
             self.label_to_idx = {"negative": 0, "neutral": 1, "positive": 2}
             self.idx_to_label = {0: "NEGATIVE", 1: "NEUTRAL", 2: "POSITIVE"}
         else:
             import torch
             from transformers import AutoModelForSequenceClassification, AutoTokenizer
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            resolved_dir = self.model_dir if os.path.exists(self.model_dir) else "ProsusAI/finbert"
-            self.model = AutoModelForSequenceClassification.from_pretrained(resolved_dir).to(self.device)
-            self.tokenizer = AutoTokenizer.from_pretrained(resolved_dir)
+            resolved_dir = self.model_dir if os.path.exists(self.model_dir) else ("models" if os.path.exists("models") else "ProsusAI/finbert")
+            is_local = os.path.exists(resolved_dir)
+            self.model = AutoModelForSequenceClassification.from_pretrained(resolved_dir, local_files_only=is_local).to(self.device)
+            self.tokenizer = AutoTokenizer.from_pretrained(resolved_dir, local_files_only=is_local)
             id2label = getattr(self.model.config, "id2label", None)
             if id2label:
                 self.label_to_idx = {v.lower(): int(k) for k, v in id2label.items()}
@@ -126,7 +128,7 @@ class LayaSystem1:
         # console.print(f"[dim]Initialized LayaSystem1 ({'ONNX' if self.use_onnx else 'PyTorch'}) in {t_load:.1f}ms[/dim]")
 
     def _get_logits(self, text: str):
-        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=128)
+        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=256)
         if self.use_onnx:
             ort_inputs = {
                 "input_ids": inputs["input_ids"].cpu().numpy(),
@@ -180,14 +182,15 @@ class LayaSystem1:
 class AnchorTokenPruner:
     def __init__(self):
         self.pattern = re.compile(
-            r'\b(percent|%|\$|revenue|profit|debt|covenant|margin|ebitda|impairment|loss|cash|default|downgrade|restructuring)\b',
+            r'\b(percent|%|\$|revenue|profit|debt|covenant|margin|ebitda|impairment|loss|cash|default|downgrade|restructuring|expense|expenses|cogs|operating|distress|insolvency|adverse|opinion|freeze|liquidity|burn|growth|sales|income)\b',
             re.IGNORECASE
         )
 
     def prune(self, document: str) -> str:
         sentences = re.split(r'(?<=[.!?]) +|\n+', document)
         dense_sentences = [s.strip() for s in sentences if self.pattern.search(s) and len(s.strip()) > 5]
-        return " ".join(dense_sentences)
+        return " ".join(dense_sentences) if dense_sentences else document
+
 
 
 class FinancialAdvisor:
@@ -368,8 +371,8 @@ def run_batch_directory(dir_path: str, advisor: FinancialAdvisor, deep_vision: b
         console.print(f"[red]Directory not found: {dir_path}[/red]")
         return
 
-    valid_exts = {".pdf", ".docx", ".txt", ".md"}
-    files = [os.path.join(dir_path, f) for f in os.listdir(dir_path) if os.path.splitext(f)[1].lower() in valid_exts]
+    valid_exts = {".pdf", ".docx", ".doc", ".csv", ".tsv", ".xlsx", ".xls", ".txt", ".md"}
+    files = [os.path.join(dir_path, f) for f in sorted(os.listdir(dir_path)) if os.path.splitext(f)[1].lower() in valid_exts]
 
     if not files:
         console.print(f"[yellow]No supported documents found in {dir_path}[/yellow]")

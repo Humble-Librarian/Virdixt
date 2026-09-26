@@ -21,8 +21,8 @@ flowchart TD
     end
 
     subgraph Document_Ingestion["📂 2. MULTI-FORMAT INGESTION (document_parser.py)"]
-        DOC[PDF / DOCX / TXT Document] --> PARSER[Universal DocumentParser]
-        PARSER -->|Clean Text Stream| PRUN[Anchor Token Pruner]
+        DOC[PDF / DOCX / CSV / EXCEL / TXT Document] --> PARSER[Universal DocumentParser]
+        PARSER -->|Clean Text / Sentencified Spreadsheet| PRUN[Anchor Token Pruner]
         PARSER -->|Embedded Visual Assets| DET[vision/chart_detector.py]
     end
 

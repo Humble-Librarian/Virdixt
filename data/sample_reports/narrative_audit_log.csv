@@ -1,0 +1,7 @@
+Metric,Q1_2024,Q4_2024,Variance_Pct,Audit_Status,Auditor_Notes
+Revenue,$120.0M,$135.0M,+12.5%,PASS,"Top-line revenue expanded due to seasonal volume in core cloud segment."
+Cost of Goods Sold,$60.0M,$85.0M,+41.7%,WARNING,"Supply chain inflation severely compressed gross margins."
+Operating Cash Flow,$25.0M,($18.0M),-172.0%,CRITICAL,"Catastrophic operating liquidity drain; working capital locked in uncollectible vendor receivables."
+Total Debt,$45.0M,$115.0M,+155.6%,CRITICAL,"Short-term credit facility drawn to maximum ceiling; impending debt covenant breach on Q4 interest coverage."
+Provision for Bad Debts,$2.0M,$14.5M,+625.0%,CRITICAL,"Material spike in credit default risk across tier-2 counterparty portfolio."
+Audit Opinion,N/A,N/A,N/A,ADVERSE,"Independent auditor issued going concern qualification and highlighted acute insolvency risk."

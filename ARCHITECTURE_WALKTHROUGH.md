@@ -1,13 +1,13 @@
 # 🧠 Virdixt: Complete Architecture & Codebase Walkthrough
 
 > **Welcome to the Virdixt Engine!**  
-> This guide is an interactive, visual walkthrough designed to help every teammate understand **what each file does**, **how data flows between modules**, and **how the entire system connects** from raw training data to real-time C++ inference and operational policy action flags.
+> This guide is an interactive, visual walkthrough designed to help every teammate understand **what each file does**, **how data flows between modules**, and **how the entire system connects** from raw training data and document ingestion to advanced NLP discourse analysis, forensic accounting, and real-time ERP policy action flags.
 
 ---
 
 ## 🗺️ 1. The Big Picture: 30,000-Foot System Map
 
-Virdixt is split into two clean lifecycles: **Offline Training (Python)** and **Online Real-Time Inference (Python & C++)**.
+Virdixt is organized into four modular, air-gapped subsystems operating entirely on local infrastructure with **zero cloud data leakage**:
 
 ```mermaid
 flowchart TD
@@ -20,9 +20,10 @@ flowchart TD
         EXP -->|models/finbert.onnx| ONNX_OUT[(Static ONNX Graph)]
     end
 
-    subgraph Document_Ingestion["📂 2. MULTI-FORMAT INGESTION (document_parser.py)"]
+    subgraph Document_Ingestion["📂 2. UNIVERSAL INGESTION (document_parser.py)"]
         DOC[PDF / DOCX / CSV / EXCEL / TXT Document] --> PARSER[Universal DocumentParser]
-        PARSER -->|Clean Text / Sentencified Spreadsheet| PRUN[Anchor Token Pruner]
+        PARSER -->|Text & Sentencified Tables| PRUN[Anchor Token Pruner]
+        PARSER -->|Structured Balances| FOR_ENG[nlp/forensic_accounting.py]
         PARSER -->|Embedded Visual Assets| DET[vision/chart_detector.py]
     end
 
@@ -33,17 +34,28 @@ flowchart TD
         VP -.->|Injected Delta Text| PRUN
     end
 
-    subgraph RealTime_Inference["⚡ 4. REAL-TIME DECISION RUNTIME (Python & C++)"]
-        PRUN -->|Dense Signal Sentences| BACKBONE[FinBERT ONNX Runtime]
+    subgraph Advanced_NLP["🧠 4. ADVANCED NLP & COMPUTATIONAL LINGUISTICS (nlp/)"]
+        PRUN --> ABSA[nlp/absa_engine.py: 5-Aspect Entity Sentiment]
+        PRUN --> HEDGE[nlp/linguistic_hedging.py: Epistemic Hedging & Obfuscation]
+        PRUN --> DISC[nlp/discourse_parser.py: RST Nucleus vs Satellite Attention]
+    end
+
+    subgraph RealTime_Inference["⚡ 5. REAL-TIME DECISION RUNTIME (infer.py & cpp/)"]
+        PRUN --> BACKBONE[FinBERT Full-Precision ONNX Engine]
         ONNX_OUT -.->|Loads Model Once| BACKBONE
         BACKBONE -->|Calibrated Logits| LAYA[Laya System-1 Primitives]
-        LAYA -->|Choice, Score 0-100, Noul| ERP[ERP / Policy Advisor Engine]
+        LAYA -->|Choice, Score 0-100, Noul| ERP[ERP & Policy Advisor Engine]
+        ABSA --> ERP
+        HEDGE --> ERP
+        DISC --> ERP
+        FOR_ENG --> ERP
         ERP -->|Action Directives| ACT[Policy Action: FREEZE_PURCHASE_ORDERS / PROCEED]
     end
 
     style Offline_Training fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4
     style Document_Ingestion fill:#1e1e2e,stroke:#a6adc8,stroke-width:2px,color:#cdd6f4
     style Multimodal_Vision fill:#181825,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4
+    style Advanced_NLP fill:#181825,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4
     style RealTime_Inference fill:#11111b,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4
 ```
 
@@ -51,39 +63,46 @@ flowchart TD
 
 ## 🔄 2. End-to-End Sequence Diagram
 
-Here is what happens when a document containing text and a financial chart enters Virdixt:
+Here is what happens when a document containing unstructured text, spreadsheets, and embedded visual charts enters Virdixt:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as Client Application
     participant Parser as document_parser.py
-    participant Pipe as vision/pipeline.py
-    participant Vision as vision/chart_extractor.py
-    participant Pruner as AnchorTokenPruner
+    participant Delta as vision/delta_calculator.py
+    participant Vision as vision/pipeline.py
+    participant NLP as Advanced NLP Subsystem (nlp/)
     participant Backbone as FinBERT (ONNX Runtime)
     participant Laya as Laya System-1 Primitives
     participant Advisor as Financial Advisor Engine
 
-    User->>Parser: Ingest Document (.pdf / .docx / .txt)
-    Parser->>Parser: Extract text stream and visual assets
-    alt Has Embedded Visual Assets
-        Parser->>Pipe: Route extracted chart image
-        Pipe->>Vision: Extract chart table values
-        Vision-->>Pipe: Synthesize concessive sentence
-        Pipe-->>Pruner: Forward enriched document text
-    else Pure Text Document
-        Parser-->>Pruner: Forward raw text (0ms vision overhead)
+    User->>Parser: Ingest Document (.pdf / .docx / .csv / .xlsx / .txt)
+    alt Tabular Spreadsheet (.csv / .xlsx)
+        Parser->>Delta: Compute metric polarity, sign flips, & target variance
+        Delta-->>Parser: Return natural corporate English narrative + financial dict
+    else Document with Embedded Charts
+        Parser->>Vision: Extract chart images from package
+        Vision->>Delta: Extract period values and generate concessive sentences
+        Delta-->>Vision: Concessive delta sentences
+        Vision-->>Parser: Enriched multimodal text stream
     end
-    Pruner->>Pruner: Filter text to dense financial signal sentences
-    Pruner->>Backbone: Send input tokens (input_ids, attention_mask)
-    Backbone->>Backbone: Execute ONNX forward pass
+    Parser->>NLP: Forward text stream & financial balance dictionary
+    par NLP Linguistic Audits
+        NLP->>NLP: ABSAEngine: Evaluate 5 operational financial aspects
+        NLP->>NLP: LinguisticHedgingDetector: Epistemic uncertainty & passive evasion
+        NLP->>NLP: RhetoricalDiscourseParser: RST Nucleus vs Satellite separation
+        NLP->>NLP: ForensicAccountingEngine: Compute Altman Z, Beneish M, Piotroski F
+    end
+    Parser->>Backbone: Send tokenized signal stream (max_length=256)
+    Backbone->>Backbone: Execute full-precision ONNX forward pass
     Backbone-->>Laya: Raw output classification logits
-    Laya->>Laya: Apply temperature scaling (T=1.25) and compute softmax
-    Laya->>Laya: Compute continuous distress score (0-100) and Noul probabilities
+    Laya->>Laya: Apply temperature scaling (T=1.25) & softmax
+    Laya->>Laya: Compute continuous distress score (0-100) & NOUL probabilities
     Laya-->>Advisor: Deliver LayaVerdict payload
-    Advisor->>Advisor: Evaluate asymmetric risk threshold (>35% negative)
-    Advisor-->>User: Output ERP Policy Action and Audit Recommendations
+    Advisor->>Advisor: Evaluate asymmetric risk threshold (>35% negative probability)
+    Advisor->>Advisor: Fuse ABSA, Hedging, Discourse, and Forensic Accounting metrics
+    Advisor-->>User: Output Multi-Dimensional ERP Audit & Action Directives
 ```
 
 ---
@@ -104,21 +123,21 @@ sequenceDiagram
 
 ### 2. `synthetic_builder.py`
 * **What it does:** Generates 1,500 domain-specific corporate accounting sentences across 30 parameterized templates (10 negative, 10 positive, 10 neutral). Injects authentic accounting terms: *impairment charges, debt covenant headroom, ARR growth, EBITDA expansion, dividend suspensions*.
-* **Input:** None (algorithmic generation with random numeric distributions).
+* **Input:** Algorithmic generation with stochastic accounting distributions.
 * **Output:** `data/synthetic.jsonl`.
-* **Why it matters:** Real news tweets often lack balance-sheet accounting disclosures; this injects institutional corporate vocabulary.
+* **Why it matters:** Real news headlines often lack granular balance-sheet accounting disclosures; this injects institutional corporate vocabulary.
 
 ### 3. `complex_sentence_injector.py`
 * **What it does:** Generates 750 multi-clause adversarial sentences using concessive conjunctions (*"Although"*, *"Despite"*, *"Notwithstanding"*, *"Even though"*).
   - *Example Negative:* *"Although revenue expanded by 14%, operating cash flow turned deeply negative."*
   - *Example Positive:* *"Despite a $110M one-off impairment charge, operating margins surged."*
 * **Output:** `data/complex.jsonl`.
-* **Why it matters:** **This is the secret sauce.** Standard FinBERT sees the word "growth" and guesses positive. This file teaches the model financial priority: *Cash Flow > Revenue* and *Guidance > Historical Quarter*.
+* **Why it matters:** Standard FinBERT sees the word "growth" and guesses positive. This file trains the model to understand real-world financial hierarchy: *Cash Flow > Revenue* and *Guidance > Historical Quarters*.
 
 ### 4. `build_rich_dataset.py`
 * **What it does:** The master dataset assembler. Loads `base_real.jsonl`, `synthetic.jsonl`, and `complex.jsonl`, balances them to exactly **2,100 rows per class (6,300 total)**, shuffles with deterministic seed `42`, and creates an 85/15 train/val split.
 * **Output:** `data/train.jsonl` (5,355 rows) and `data/val.jsonl` (945 rows).
-* **Why it matters:** Solves the **75% Problem**. Equal gradient pressure raises Negative Recall from **9.5% to 88.6%**.
+* **Why it matters:** Solves the class-imbalance problem, elevating Negative Recall from **9.5% to 88.64%**.
 
 ---
 
@@ -138,94 +157,112 @@ sequenceDiagram
 * **Output:** Fine-tuned model checkpoints saved to `./output/`.
 
 ### 7. `eval.py`
-* **What it does:** Loads `./output/` and runs a full validation sweep over `data/val.jsonl`. Generates the complete Scikit-Learn `classification_report` (Precision, Recall, F1 per class) and the confusion matrix.
+* **What it does:** Loads `./output/` and runs a validation sweep over `data/val.jsonl`. Generates the complete Scikit-Learn `classification_report` (Precision, Recall, F1 per class) and the confusion matrix.
 * **Expected Result:** **90.26% Accuracy, 0.9022 Macro-F1, 88.64% Negative Recall**.
 
 ### 8. `export_onnx.py`
-* **What it does:** "Freezes" the PyTorch model into an optimized **ONNX computation graph** (`models/finbert.onnx`) with dynamic batch axes. Supports an optional `--quantize` flag to produce an **INT8 quantized model** (3x faster on Intel CPUs).
+* **What it does:** Freezes the PyTorch model into an optimized **ONNX computation graph** (`models/finbert.onnx`) with dynamic batch and sequence length axes. Supports an optional `--quantize` flag to produce an INT8 quantized model.
 * **Output:** `models/finbert.onnx` + `models/tokenizer.json`.
-* **Why it matters:** Bridges the Python training world with the bare-metal C++ inference engine.
+* **Why it matters:** Enables sub-10ms CPU inference in Python and connects directly to the bare-metal C++ engine.
 
 ---
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│ MODULE 3: DOCUMENT INGESTION & MULTIMODAL VISION (`document_parser.py` & `vision/`)│
+│ MODULE 3: DOCUMENT INGESTION & SPREADSHEET SENTENCIFICATION                      │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 9. `document_parser.py`
-* **What it does:** Universal multi-format document ingestor.
+* **What it does:** Universal multi-format document ingestor supporting:
+  - **PDF:** Extracts text pages and embedded raster images via `PyMuPDF` (`fitz`) / `pypdf`.
+  - **DOCX:** Extracts text paragraphs, tables, and embedded drawings from `word/media/`.
+  - **CSV / TSV:** Automated delimiter detection (`csv.Sniffer`), tabular sentencification, and financial balance extraction.
+  - **Excel (.xlsx / .xls):** Evaluates formulas with `openpyxl` (`data_only=True`), processes all worksheets, and extracts embedded charts from `xl/media/`.
   - **TXT:** Multi-encoding text reader (`utf-8`, `utf-8-sig`, `latin-1`, `cp1252`).
-  - **DOCX:** Extracts text paragraphs and automatically decompresses embedded chart drawings/images from `word/media/`.
-  - **PDF:** Extracts text pages and extracts high-resolution embedded raster images via `PyMuPDF` (`fitz`) / `pypdf`.
-* **Output:** `ParsedDocument(raw_text, image_paths, file_type, page_count, has_visuals)`.
-* **Why it matters:** Allows ingesting any corporate document format. If no images exist, bypasses the vision pipeline with **0ms visual overhead**.
+* **Output:** `ParsedDocument(raw_text, image_paths, file_type, page_count, has_visuals, financial_dict)`.
 
-### 10. `vision/chart_detector.py`
-* **What it does:** Uses Microsoft's ultra-lightweight **Florence-2** model (with fast visual bounding-box heuristic fallback) to classify incoming images as *financial charts* vs. *decorative photos/logos*.
-* **Output:** `ChartDetectionResult(is_chart=True/False, confidence=0.98)`.
-
-### 11. `vision/chart_extractor.py`
-* **What it does:** Extracts table data from charts.
-  - **Fast-Path Heuristic (Default):** Extracts period deltas in **< 5ms**.
-  - **Deep Vision (`--deep-vision`):** Runs **Google DePlot** (`google/deplot`) to generate linearized table strings.
-* **Why it matters:** Eliminates 10+ second CPU wait times for standard charts while allowing deep token autoregression when explicitly requested.
-
-### 12. `vision/delta_calculator.py`
-* **What it does:** **Zero-ML, pure Python arithmetic.** Parses the linearized table, calculates exact percentage changes ($\Delta = \frac{v_2 - v_1}{v_1} \times 100$), and synthesizes a concessive sentence (*"Although Revenue grew 6.7%, Gross Margin declined 38.9%"*).
+### 10. `vision/delta_calculator.py`
+* **What it does:** Deterministic math engine for chart-to-text and spreadsheet-to-text conversion:
+  - **Metric Polarity Mapping:** Distinguishes Direct Growth metrics (*Revenue, EBITDA, FCF*) from Inverted Risk metrics (*Debt, OPEX, COGS, Burn Rate*).
+  - **Sign-Flip Accounting:** Identifies transitions between operating losses and net profits.
+  - **Token-Optimized Currency Formatting:** Converts raw figures into compact financial notation (`$135.0M` instead of `$135,000,000.0`), cutting BERT sub-token consumption by $>80\%$.
+  - **Budget Variance Synthesis:** Computes Target vs Actual variances.
 * **Execution Time:** **< 0.05 milliseconds.** Zero hallucination risk.
 
-### 13. `vision/pipeline.py`
-* **What it does:** High-level vision orchestrator. Glues Detector $\to$ Extractor $\to$ Delta Calculator together. Enriches document text streams with concessive chart analysis before passing to FinBERT.
+### 11. `vision/chart_detector.py`, `chart_extractor.py`, `pipeline.py`
+* **What they do:** Vision subsystem for detecting charts via Florence-2 heuristics, extracting table deltas, and injecting concessive sentences into the document stream before passing to FinBERT.
 
 ---
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│ MODULE 4: REAL-TIME DECISION ENGINE (`infer.py`)                                 │
+│ MODULE 4: ADVANCED NLP & COMPUTATIONAL LINGUISTICS (`nlp/`)                      │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 14. `infer.py`
-* **What it does:** The complete high-performance decision runtime containing:
-  1. **`AnchorTokenPruner`:** Regex pruner extracting dense signal sentences (0.1ms).
-  2. **`LayaSystem1`:** Computes `Choice`, `Score` (0-100 distress index), and `Noul` binary risk hypotheses (`liquidity_distress`, `debt_covenant_breach_risk`, `growth_momentum`, `capital_return`). Auto-detects fast ONNX Runtime.
-  3. **`FinancialAdvisor`:** Applies the **Asymmetric Risk Gate (35% threshold)** and outputs strict operational action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`).
+### 12. `nlp/absa_engine.py` (Aspect-Based Sentiment Analysis)
+* **What it does:** Decomposes complex documents into 5 distinct operational and risk aspects:
+  1. `Top-Line & Growth` (Revenue, Sales, Bookings, ARR)
+  2. `Cost & Profitability` (COGS, OPEX, SG&A, Gross Margin, EBITDA)
+  3. `Liquidity & Cash Flow` (Operating Cash Flow, Free Cash Flow, Cash Burn)
+  4. `Debt & Capital Solvency` (Total Debt, Covenant Compliance, Credit Lines)
+  5. `Audit & Governance Risk` (Audit Opinions, Going Concern, SEC Subpoenas)
+* **Output:** `List[AspectResult]` containing sentiment, distress %, risk level, and grounding sentences per entity.
+
+### 13. `nlp/linguistic_hedging.py` (Deception & Obfuscation Detector)
+* **What it does:** Analyzes corporate communication for intentional ambiguity:
+  - **Epistemic Uncertainty Index (0–100):** Detects modal hedges (*"might"*, *"could"*, *"management believes"*, *"preliminarily"*).
+  - **Passive Voice Evasion Score (0–100):** Flags agentless passive voice used to deflect blame (*"adjustments were recognized"*, *"losses were incurred"*).
+  - **Gunning-Fog Obfuscation Grade:** Calculates reading complexity to flag complex corporate smoke-screens ($>18 = \text{Obfuscated}$).
+  - **Euphemism Tracker:** Flags corporate doublespeak (*"headwinds"*, *"strategic realignment"*).
+
+### 14. `nlp/discourse_parser.py` (Rhetorical Structure Theory)
+* **What it does:** Deconstructs complex multi-clause concessive structures into:
+  - **Satellite Clause (Rhetorical Buffer):** e.g., *"Although revenue grew by 12.5%..."*
+  - **Nucleus Clause (Core Economic Reality):** e.g., *"...operating expenses surged 45.0% and debt facilities reached ceiling."*
+* **Why it matters:** Flags **Rhetorical Masking** when positive satellite buffers attempt to camouflage severe distress in the nucleus.
+
+### 15. `nlp/forensic_accounting.py` (Deterministic Quantitative Suite)
+* **What it does:** Computes institutional bankruptcy and manipulation formulas directly from extracted spreadsheet dictionaries:
+  - **Altman Z-Score:** Bankruptcy prediction ($Z = 1.2X_1 + 1.4X_2 + 3.3X_3 + 0.6X_4 + 0.999X_5$).
+  - **Beneish M-Score:** Earnings manipulation risk ($M > -1.78 \implies \text{High Risk}$).
+  - **Piotroski F-Score:** 9-point fundamental financial health scale.
+* **Execution Time:** **< 0.01 milliseconds.**
+
+---
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ MODULE 5: REAL-TIME DECISION ENGINE (`infer.py`)                                 │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 16. `infer.py`
+* **What it does:** The primary decision runtime orchestrating the entire pipeline:
+  1. **`AnchorTokenPruner`:** Extracts dense signal sentences in $0.1\text{ms}$.
+  2. **`LayaSystem1`:** Executes the full-precision ONNX forward pass, computes `Choice`, `Score` (0-100 distress index), and `Noul` binary risk hypotheses.
+  3. **`FinancialAdvisor`:** Integrates the NLP suite (ABSA, Hedging, Discourse) and Forensic Accounting metrics, enforcing the asymmetric risk policy gates.
   4. **Multi-Mode Execution:**
-     - **One-Shot File Evaluation:** `python infer.py --file <doc.pdf / doc.docx / doc.txt>`
+     - **Single File Audit:** `python infer.py --file <report.pdf / report.csv / report.xlsx>`
      - **Batch Directory Audit:** `python infer.py --batch <folder_path>`
-     - **Warm Interactive REPL:** `python infer.py --interactive` (Sub-10ms evaluation per document)
+     - **Warm Interactive REPL:** `python infer.py --interactive` (Sub-10ms latency)
+     - **Direct Text Evaluation:** `python infer.py --text "..."`
 
 ---
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│ MODULE 5: HIGH-THROUGHPUT C++ RUNTIME (`cpp/`)                                   │
+│ MODULE 6: HIGH-THROUGHPUT C++ RUNTIME (`cpp/`)                                   │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 15. `cpp/include/laya_primitives.hpp`
-* **What it does:** Header-only modern C++20 math engine. Implements Temperature Softmax ($T=1.25$), continuous Distress Index $[0, 100]$, and sigmoid-calibrated Noul propositions.
-* **Speed:** **~40 nanoseconds.**
-
-### 16. `cpp/include/inference_engine.hpp`
-* **What it does:** Direct C++ wrapper around Microsoft ONNX Runtime with standalone simulation fallback. Automatically initializes CPU thread pools (AVX2/VNNI vectorization) or appends the NVIDIA CUDA execution provider.
-
-### 17. `cpp/include/text_preprocessor.hpp`
-* **What it does:** C++ regex-based anchor token pruner. Compresses multi-page documents down to dense financial signal sentences before tokenization.
-
-### 18. `cpp/include/erp_advisor.hpp`
-* **What it does:** Deterministic rule engine in C++ that maps Laya risk grades into formatted audit reports and operational policy flags.
-
-### 19. `cpp/src/main.cpp` & `cpp/CMakeLists.txt`
-* **What it does:** C++ executable entry point with built-in test suite executing complex multi-clause enterprise scenarios.
+### 17. `cpp/include/laya_primitives.hpp`, `inference_engine.hpp`, `erp_advisor.hpp`
+* **What they do:** Header-only modern C++20 engine executing temperature softmax, continuous distress index math, and ERP policy routing in **~40 nanoseconds** per pass with AVX2 vectorization.
 
 ---
 
 ## 🧩 4. Interactive File Dependency Matrix
-
-Use this matrix to understand what breaks if you edit a file:
 
 | File | Depends On (Inputs) | Consumed By (Downstream) | If you change this... |
 |---|---|---|---|
@@ -235,61 +272,68 @@ Use this matrix to understand what breaks if you edit a file:
 | `build_rich_dataset.py` | `data/*.jsonl` | `train.py`, `soup.yaml` | **Changes training distribution & class balance** |
 | `train.py` / `soup.yaml` | `data/train.jsonl` | `eval.py`, `export_onnx.py` | **Changes model neural weights (`./output`)** |
 | `export_onnx.py` | `./output/` | `infer.py`, `cpp/` | **Updates `finbert.onnx` for Python & C++** |
-| `document_parser.py` | Local files (.pdf/.docx/.txt) | `infer.py` | Changes text & visual asset extraction |
-| `vision/delta_calculator.py`| Table strings | `vision/pipeline.py` | Changes mathematical delta phrasing |
-| `vision/pipeline.py` | `vision/*` | `infer.py` | Changes multimodal document ingestion |
-| `laya_primitives.hpp` | Raw logits | `main.cpp`, ERP Advisor | **Changes Laya score math & risk calibration** |
-| `infer.py` | `./output` or `.onnx` | End Users / Enterprise Systems | Main Python entry point for live decisions |
+| `document_parser.py` | Local files (.pdf/.docx/.csv/.xlsx/.txt) | `infer.py` | Changes text, table, & visual extraction |
+| `vision/delta_calculator.py`| Linearized tables | `document_parser.py`, `vision/` | Changes delta math, polarity & currency format |
+| `nlp/absa_engine.py` | Text stream + `LayaSystem1` | `infer.py` | Changes aspect-based entity risk evaluation |
+| `nlp/linguistic_hedging.py` | Raw text | `infer.py` | Changes epistemic uncertainty & fog scoring |
+| `nlp/discourse_parser.py` | Raw text | `infer.py` | Changes nucleus vs satellite clause parsing |
+| `nlp/forensic_accounting.py`| Balance dictionary | `infer.py` | Changes Altman Z, Beneish M, Piotroski F math |
+| `infer.py` | `models/finbert.onnx`, `nlp/*` | End Users & ERP Systems | Main Python entry point for live decisions |
 
 ---
 
 ## ⚡ 5. Execution Recipes for Teammates
 
-### Recipe 1: Fast One-Shot Document Evaluation
+### Recipe 1: Fast One-Shot Document Evaluation (All Formats)
 ```bash
-# Evaluate any PDF, Word (.docx), or Text (.txt) report:
+# Evaluate a CSV spreadsheet (narrative audit notes or pure numbers):
+python infer.py --file data/sample_reports/narrative_audit_log.csv
+python infer.py --file data/sample_reports/pure_numerical_distress.csv
+
+# Evaluate an Excel workbook (.xlsx):
+python infer.py --file data/sample_reports/corporate_filing.xlsx
+
+# Evaluate PDF, Word (.docx), or Text (.txt) filings:
 python infer.py --file data/sample_reports/covenant_breach.pdf
 python infer.py --file data/sample_reports/healthy_report.docx
 python infer.py --file data/sample_reports/distress_report.txt
 
 # Evaluate a multimodal document with embedded charts:
 python infer.py --file data/sample_reports/multimodal_report.docx
-
-# Optional deep vision autoregression:
-python infer.py --file data/sample_reports/multimodal_report.docx --deep-vision
 ```
 
 ### Recipe 2: Warm Interactive REPL Session (Sub-10ms per document)
 ```bash
 python infer.py --interactive
-# At the virdixt > prompt, type any filename or text commentary!
+# At the virdixt > prompt, enter any filepath or financial text!
 ```
 
 ### Recipe 3: Multi-Document Batch Directory Audit
 ```bash
+# Audits mixed folders (.pdf, .docx, .csv, .xlsx, .txt) in a single warm session:
 python infer.py --batch data/sample_reports/
 ```
 
-### Recipe 4: Direct Text Analysis
+### Recipe 4: Direct Text Analysis with Full NLP Breakdown
 ```bash
-python infer.py --text "Supplier defaulted on obligations leading to $5M inventory write-down."
+python infer.py --text "Although top-line revenue grew by 12.5%, operating expenses surged 45.0% and management believes liquidity might normalize as credit facilities near ceilings."
 ```
 
 ### Recipe 5: Rebuilding Dataset & Fine-Tuning
 ```bash
-# Rebuild dataset:
 python prepare_data.py
 python synthetic_builder.py
 python complex_sentence_injector.py
 python build_rich_dataset.py
-
-# Fine-tune model:
 python train.py
-# OR: soup train --config soup.yaml
 ```
 
-### Recipe 6: Exporting to ONNX & Quantizing
+### Recipe 6: Exporting ONNX Models
 ```bash
+# Export full-precision FP16 ONNX:
+python export_onnx.py
+
+# Export INT8 Quantized ONNX (optional):
 python export_onnx.py --quantize
 ```
 
@@ -300,13 +344,3 @@ cmake -B build
 cmake --build build --config Release
 ./build/virdixt_engine
 ```
-
----
-
-## 🎯 Summary for Teammates
-* **To add support for new file formats (e.g. HTML, RTF):** Extend `document_parser.py`.
-* **To improve accuracy on complex statements:** Edit `complex_sentence_injector.py`.
-* **To add new corporate accounting phrases:** Edit `synthetic_builder.py`.
-* **To adjust distress sensitivity & thresholds:** Edit the risk gates in `infer.py` and `cpp/include/laya_primitives.hpp`.
-* **To modify ERP action flags:** Edit `cpp/include/erp_advisor.hpp` and `FinancialAdvisor` in `infer.py`.
-

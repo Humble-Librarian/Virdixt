@@ -365,26 +365,27 @@ Virdixt/
 ├── 📄 export_onnx.py                 # ONNX + INT8 quantization exporter
 │
 ├── ── INFERENCE & VISION ───────────────
-├── 📄 infer.py                       # Laya System-1 Engine (Choice, Score, Noul) + Decision Advisor
+├── 📄 document_parser.py          # Universal PDF, DOCX, & TXT extractor
+├── 📄 infer.py                    # Laya System-1 Engine (Choice, Score, Noul) + Decision Advisor
 ├── 📂 vision/
-│   ├── 📄 chart_detector.py          # Florence-2 chart classifier
-│   ├── 📄 chart_extractor.py         # DePlot chart-to-table parser
-│   ├── 📄 delta_calculator.py        # Deterministic % math + concessive sentence generator
-│   └── 📄 pipeline.py                # Full visual document orchestrator
+│   ├── 📄 chart_detector.py       # Florence-2 chart classifier
+│   ├── 📄 chart_extractor.py      # DePlot chart-to-table parser
+│   ├── 📄 delta_calculator.py     # Deterministic % math + concessive sentence generator
+│   └── 📄 pipeline.py             # Full visual document orchestrator
 │
 ├── ── C++ HIGH-THROUGHPUT RUNTIME ──────
 ├── 📂 cpp/
-│   ├── 📄 CMakeLists.txt             # Build config (ONNX Runtime + CUDA)
+│   ├── 📄 CMakeLists.txt          # Build config (ONNX Runtime + CUDA)
 │   ├── 📂 include/
-│   │   ├── 📄 laya_primitives.hpp    # Laya System-1 math & probability calibration
-│   │   ├── 📄 inference_engine.hpp   # ONNX Runtime C++ wrapper
-│   │   ├── 📄 erp_advisor.hpp        # Deterministic ERP Policy Engine
-│   │   └── 📄 text_preprocessor.hpp  # Fast regex signal sentence pruner
+│   │   ├── 📄 laya_primitives.hpp # Laya System-1 math & probability calibration
+│   │   ├── 📄 inference_engine.hpp# ONNX Runtime C++ wrapper
+│   │   ├── 📄 erp_advisor.hpp     # Deterministic ERP Policy Engine
+│   │   └── 📄 text_preprocessor.hpp # Fast regex signal sentence pruner
 │   └── 📂 src/
-│       └── 📄 main.cpp               # C++ test runner
+│       └── 📄 main.cpp            # C++ test runner
 │
 └── ── DATASETS ─────────────────────────
-    └── 📂 data/                      # train.jsonl (5,355 rows) & val.jsonl (945 rows)
+    └── 📂 data/                   # train.jsonl (5,355 rows) & val.jsonl (945 rows)
 ```
 
 ---
@@ -413,9 +414,18 @@ python train.py
 soup train --config soup.yaml
 ```
 
-### Step 4: Run the Laya Decision Engine
+### Step 4: Run Decision Engine (CLI, Document Ingestion, or ONNX)
 ```bash
-python infer.py --test
+# Evaluate any PDF, DOCX, or TXT file (Pure Text or with Charts/Visuals):
+python infer.py --file path/to/quarterly_filing.pdf --onnx
+python infer.py --file path/to/audit_report.docx
+python infer.py --file path/to/vendor_notes.txt
+
+# Direct text analysis:
+python infer.py --text "Supplier breached covenants, debt default imminent." --onnx
+
+# Run hardcoded validation test suite:
+python infer.py --test --onnx
 ```
 
 ### Step 5: Export to ONNX (for C++ runtime)

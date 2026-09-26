@@ -21,15 +21,19 @@
 
 ## 🚀 Key Capabilities
 
-* **Universal Multi-Format Document Ingestion:** Native, zero-overhead parser for **PDF**, **DOCX**, and **TXT** files. Extracts text streams and embedded visual chart assets automatically.
-* **Deterministic Chart-to-Table Vision Subsystem:** Detects financial graphs via lightweight vision models, extracts underlying tables, and computes exact percentage deltas ($\Delta = \frac{v_2 - v_1}{v_1} \times 100$) to inject concessive commentary without visual hallucination.
+* **Universal Multi-Format Document Ingestion:** Native, zero-overhead parser for **PDF**, **DOCX**, **CSV**, **Excel (.xlsx)**, and **TXT** files with deterministic sentencification and embedded chart extraction.
+* **Aspect-Based Financial Sentiment Analysis (ABSA):** Multi-entity token decomposition evaluating distinct operational aspects (`Top-Line & Growth`, `Cost & Margin Structure`, `Liquidity & Cash Burn`, `Debt & Solvency`, `Audit & Governance Risk`) independently.
+* **Linguistic Deception & Executive Hedging Audit:** Computational linguistics engine measuring Epistemic Uncertainty scores, Agentless Passive Voice Evasion, Gunning-Fog Obfuscation indexes, and corporate euphemisms.
+* **Rhetorical Structure Theory (RST) Concessive Parsing:** Identifies rhetorical masking by separating superficial *Satellites* (buffer clauses) from core *Nuclei* (dominant economic realities).
+* **Deterministic Quantitative Forensic Accounting:** Microsecond calculations of institutional solvency benchmarks (**Altman Z-Score**, **Beneish M-Score**, **Piotroski F-Score**) with zero external dependencies.
+* **Deterministic Chart-to-Table Vision Subsystem:** Detects financial graphs, extracts underlying tables, and computes exact percentage deltas to inject concessive commentary without visual hallucination.
 * **Laya Open-Weights System-1 Primitives:**
   * **`Choice`:** Calibrated discrete sentiment classification (`NEGATIVE`, `NEUTRAL`, `POSITIVE`).
   * **`Score`:** Continuous Financial Distress Index $[0.0, 100.0]$ ($0 = \text{Peak Solvency}, 100 = \text{Imminent Distress}$).
   * **`Noul`:** Calibrated probability propositions ($P(\text{Liquidity Distress})$, $P(\text{Covenant Breach})$, $P(\text{Growth Momentum})$).
 * **Automated ERP Policy Engine:** Evaluates asymmetric risk thresholds ($>35\%$ negative probability triggers warnings) and generates enforceable policy action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`).
-* **High-Throughput Dual Runtime:** Python ONNX Runtime engine with warm interactive REPL and batch directory audit modes, alongside a zero-copy modern **C++20** engine.
-* **Concessive Financial Hierarchy Reasoning:** Fine-tuned on adversarial multi-clause disclosures to enforce real-world financial priorities (*Operating Profit > Revenue*, *Cash Flow > Headline Earnings*, *Guidance > Historical Quarters*).
+* **100% Air-Gapped / Zero-Cloud Leakage:** Operates entirely offline on standard CPU/GPU using native ONNX runtimes. Zero data ever leaves the local machine.
+
 
 ---
 

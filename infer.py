@@ -50,6 +50,18 @@ class NoulResult:
     capital_return_sustainable: float
 
 
+from nlp import (
+    ABSAEngine,
+    AspectResult,
+    LinguisticHedgingDetector,
+    HedgingAnalysisResult,
+    RhetoricalDiscourseParser,
+    DiscourseAnalysisResult,
+    ForensicAccountingEngine,
+    ForensicScoreResult,
+)
+
+
 @dataclass
 class AdvisorResult:
     risk_grade: RiskGrade
@@ -60,7 +72,12 @@ class AdvisorResult:
     distress_score: float
     noul: NoulResult
     calibrated_probs: Dict[str, float]
+    absa_results: List[AspectResult] = field(default_factory=list)
+    hedging_result: Optional[HedgingAnalysisResult] = None
+    discourse_result: Optional[DiscourseAnalysisResult] = None
+    forensic_scores: Optional[ForensicScoreResult] = None
     inference_time_ms: float = 0.0
+
 
 
 class LayaSystem1:
@@ -197,8 +214,12 @@ class FinancialAdvisor:
     def __init__(self, system1: LayaSystem1, pruner: AnchorTokenPruner):
         self.system1 = system1
         self.pruner = pruner
+        self.absa_engine = ABSAEngine(system1)
+        self.hedging_detector = LinguisticHedgingDetector()
+        self.discourse_parser = RhetoricalDiscourseParser()
+        self.forensic_engine = ForensicAccountingEngine()
 
-    def advise(self, document: str) -> AdvisorResult:
+    def advise(self, document: str, financial_dict: Optional[Dict[str, float]] = None) -> AdvisorResult:
         t0 = time.time()
         pruned_text = self.pruner.prune(document)
         if not pruned_text:
@@ -211,6 +232,12 @@ class FinancialAdvisor:
         noul_val = self.system1.noul(pruned_text)
         probs = self.system1.get_calibrated_probs(pruned_text)
         t_sys1 = time.time() - t1
+
+        # Run Advanced NLP & Computational Linguistics Audits
+        absa_results = self.absa_engine.evaluate(document)
+        hedging_res = self.hedging_detector.analyze(document)
+        discourse_res = self.discourse_parser.parse(document)
+        forensic_res = self.forensic_engine.compute(financial_dict or {})
 
         neg_prob = probs["negative"]
 
@@ -260,6 +287,10 @@ class FinancialAdvisor:
             distress_score=score_val,
             noul=noul_val,
             calibrated_probs=probs,
+            absa_results=absa_results,
+            hedging_result=hedging_res,
+            discourse_result=discourse_res,
+            forensic_scores=forensic_res,
             inference_time_ms=total_time_ms
         )
 
@@ -273,8 +304,9 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
     }
     grade_color = color_map.get(res.risk_grade, "white")
 
+    # 1. Primary Executive Verdict Table
     table = Table(title=f"=== VIRDIXT FINANCIAL ADVISOR & ERP AUDIT: {source_title} ===", style="blue")
-    table.add_column("Decision Dimension", style="cyan", width=26)
+    table.add_column("Decision Dimension", style="cyan", width=28)
     table.add_column("Verdict / Calibrated Value", style="white")
 
     table.add_row("Sentiment Choice", f"[{'red' if res.sentiment_choice=='NEGATIVE' else 'green' if res.sentiment_choice=='POSITIVE' else 'yellow'}]{res.sentiment_choice}[/]")
@@ -293,11 +325,91 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
     )
     table.add_row("NOUL Hypotheses P(True)", noul_str)
 
-    recs_str = "\n".join([f"- {r}" for r in res.action_recommendations])
-    table.add_row("Action Directives", recs_str)
-
     console.print()
     console.print(table)
+
+    # 2. Aspect-Based Financial Sentiment Table (ABSA)
+    if res.absa_results:
+        absa_table = Table(title="🔍 Aspect-Based Sentiment & Multi-Entity Risk (ABSA)", style="magenta")
+        absa_table.add_column("Financial Aspect", style="bold cyan", width=26)
+        absa_table.add_column("Sentiment", style="white", width=16)
+        absa_table.add_column("Distress %", style="white", width=12)
+        absa_table.add_column("Risk Level", style="white", width=14)
+        absa_table.add_column("Key Grounding Evidence", style="dim white")
+
+        for a in res.absa_results:
+            if not a.detected:
+                absa_table.add_row(a.aspect_name, "[dim]NOT REPORTED[/dim]", "-", "[dim]NEUTRAL[/dim]", "[dim]No specific commentary[/dim]")
+                continue
+            s_color = "red" if a.sentiment == "NEGATIVE" else "green" if a.sentiment == "POSITIVE" else "yellow"
+            r_color = "red" if a.risk_level == "CRITICAL" else "yellow" if a.risk_level == "WARNING" else "green"
+            evidence = a.key_sentences[0] if a.key_sentences else ""
+            if len(evidence) > 65:
+                evidence = evidence[:62] + "..."
+            absa_table.add_row(
+                a.aspect_name,
+                f"[{s_color}]{a.sentiment}[/{s_color}]",
+                f"{a.distress_score:.1f}%",
+                f"[{r_color}]{a.risk_level}[/{r_color}]",
+                evidence
+            )
+        console.print(absa_table)
+
+    # 3. Linguistic Deception & Hedging Audit Panel
+    if res.hedging_result and (res.hedging_result.hedging_score > 0 or res.hedging_result.gunning_fog_index > 0):
+        h = res.hedging_result
+        h_color = "red" if h.hedging_level in ["EXTREME_EVASION", "HIGH_UNCERTAINTY"] else "yellow" if h.hedging_level == "MODERATE" else "green"
+        euphemism_str = ", ".join([f"'{e}'" for e in h.detected_euphemisms]) if h.detected_euphemisms else "None detected"
+        hedges_str = ", ".join([f"'{m}'" for m in h.detected_hedges]) if h.detected_hedges else "None detected"
+        
+        hedge_panel = Panel(
+            f"• [bold]Epistemic Uncertainty Level:[/] [{h_color}]{h.hedging_level}[/{h_color}] (Score: {h.hedging_score:.1f}/100)\n"
+            f"• [bold]Passive Voice Evasion Score:[/] {h.passive_evasion_score:.1f}/100\n"
+            f"• [bold]Gunning-Fog Obfuscation Index:[/] Grade {h.gunning_fog_index:.1f} ({h.obfuscation_risk})\n"
+            f"• [bold]Flagged Corporate Euphemisms:[/] [yellow]{euphemism_str}[/yellow]\n"
+            f"• [bold]Detected Modal Hedges:[/] [cyan]{hedges_str}[/cyan]",
+            title="🗣️ Linguistic Deception & Executive Hedging Audit",
+            style="yellow"
+        )
+        console.print(hedge_panel)
+
+    # 4. Rhetorical Discourse & Concessive Nucleus Breakdown
+    if res.discourse_result and res.discourse_result.has_concessive_structures:
+        d = res.discourse_result
+        deceptive_pairs = [p for p in d.pairs if p.is_deceptive_buffer]
+        disc_text = []
+        if deceptive_pairs:
+            disc_text.append("[bold red][!] Rhetorical Masking Detected:[/] Superficial positive buffer clauses detected masking core distress nuclei:")
+            for p in deceptive_pairs[:2]:
+                disc_text.append(f"  • [green]Satellite (Buffer):[/] \"{p.satellite_clause}\"")
+                disc_text.append(f"    ↳ [bold red]Nucleus (Core Reality):[/] \"{p.nucleus_clause}\"")
+        else:
+            disc_text.append(f"Parsed {d.total_concessive_sentences} concessive rhetorical structure(s). Core discourse nuclei aligned with accounting deltas.")
+
+        disc_panel = Panel("\n".join(disc_text), title="⚖️ Rhetorical Structure Theory (RST) Discourse Analysis", style="cyan")
+        console.print(disc_panel)
+
+    # 5. Deterministic Forensic Accounting Suite (Altman Z + Beneish M + Piotroski F)
+    if res.forensic_scores and res.forensic_scores.calculated:
+        f = res.forensic_scores
+        z_color = "red" if "DISTRESS" in f.altman_zone else "yellow" if "GREY" in f.altman_zone else "green"
+        m_color = "red" if "HIGH" in f.beneish_manipulation_risk else "green"
+        f_color = "green" if "STRONG" in f.piotroski_grade else "yellow" if "MODERATE" in f.piotroski_grade else "red"
+
+        forensic_table = Table(title="📐 Deterministic Forensic Accounting Benchmarks (0ms ML Overhead)", style="green")
+        forensic_table.add_column("Forensic Model", style="cyan", width=26)
+        forensic_table.add_column("Calculated Score", style="white", width=18)
+        forensic_table.add_column("Institutional Risk Interpretation", style="white")
+
+        forensic_table.add_row("Altman Z-Score", f"{f.altman_z_score:.2f}" if f.altman_z_score is not None else "N/A", f"[{z_color}]{f.altman_zone}[/{z_color}]")
+        forensic_table.add_row("Beneish M-Score", f"{f.beneish_m_score:.2f}" if f.beneish_m_score is not None else "N/A", f"[{m_color}]{f.beneish_manipulation_risk}[/{m_color}]")
+        forensic_table.add_row("Piotroski F-Score", f"{f.piotroski_f_score} / 9" if f.piotroski_f_score is not None else "N/A", f"[{f_color}]{f.piotroski_grade}[/{f_color}]")
+        console.print(forensic_table)
+
+    # 6. Action Recommendations
+    recs_str = "\n".join([f"• {r}" for r in res.action_recommendations])
+    rec_panel = Panel(recs_str, title="🛡️ ERP Policy Directives & Commercial Actions", style=grade_color)
+    console.print(rec_panel)
     console.print()
 
 
@@ -325,7 +437,7 @@ def process_file_input(file_path: str, advisor: FinancialAdvisor, deep_vision: b
     else:
         console.print("[dim][+] Pure text report: Vision pipeline bypassed (0ms visual overhead).[/dim]")
 
-    result = advisor.advise(final_text)
+    result = advisor.advise(final_text, financial_dict=getattr(parsed, "financial_dict", None))
     display_advisor_report(result, source_title=os.path.basename(file_path))
     parsed.cleanup()
     return result

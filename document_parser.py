@@ -21,6 +21,7 @@ class ParsedDocument:
     file_type: str = "unknown"
     page_count: int = 1
     has_visuals: bool = False
+    financial_dict: Dict[str, float] = field(default_factory=dict)
     temp_dir: Optional[str] = None
 
     def cleanup(self):
@@ -63,7 +64,7 @@ class DocumentParser:
         
         Uses deterministic delta calculations, metric polarity mapping, and audit note extraction.
         """
-        from vision.delta_calculator import synthesize_table_narrative
+        from vision.delta_calculator import synthesize_table_narrative, _clean_numeric
 
         encodings = ["utf-8", "utf-8-sig", "latin-1", "cp1252"]
         raw_rows = []
@@ -96,9 +97,18 @@ class DocumentParser:
 
         headers = [h.strip() for h in raw_rows[0]]
         dict_rows = []
+        financial_dict = {}
         for r in raw_rows[1:]:
             padded = r + [""] * (len(headers) - len(r))
-            dict_rows.append({headers[i]: padded[i].strip() for i in range(len(headers))})
+            row_dict = {headers[i]: padded[i].strip() for i in range(len(headers))}
+            dict_rows.append(row_dict)
+            metric_k = str(padded[0]).strip()
+            # Extract the last numeric value for this metric
+            for val in reversed(padded[1:]):
+                num_v = _clean_numeric(val)
+                if num_v is not None:
+                    financial_dict[metric_k] = num_v
+                    break
 
         table_title = os.path.splitext(os.path.basename(file_path))[0].replace("_", " ").title()
         narrative = synthesize_table_narrative(dict_rows, table_name=table_title)
@@ -108,16 +118,18 @@ class DocumentParser:
             image_paths=[],
             file_type="CSV",
             page_count=1,
-            has_visuals=False
+            has_visuals=False,
+            financial_dict=financial_dict
         )
 
     @staticmethod
     def parse_excel(file_path: str, extract_images: bool = True) -> ParsedDocument:
         """Parses Excel (.xlsx/.xls) workbooks, sentencifying all sheets and extracting embedded charts."""
-        from vision.delta_calculator import synthesize_table_narrative
+        from vision.delta_calculator import synthesize_table_narrative, _clean_numeric
 
         sheet_narratives = []
         image_paths = []
+        financial_dict = {}
         temp_dir = tempfile.mkdtemp(prefix="virdixt_excel_")
         sheet_count = 0
 
@@ -140,6 +152,12 @@ class DocumentParser:
                     padded = list(r) + [None] * (len(headers) - len(r))
                     row_dict = {headers[i]: padded[i] for i in range(len(headers))}
                     dict_rows.append(row_dict)
+                    metric_k = str(padded[0]).strip()
+                    for val in reversed(padded[1:]):
+                        num_v = _clean_numeric(val)
+                        if num_v is not None:
+                            financial_dict[metric_k] = num_v
+                            break
 
                 sheet_text = synthesize_table_narrative(dict_rows, table_name=f"Sheet: {sheet_name}")
                 if sheet_text:

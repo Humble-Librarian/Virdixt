@@ -20,24 +20,29 @@ flowchart TD
         EXP -->|models/finbert.onnx| ONNX_OUT[(Static ONNX Graph)]
     end
 
-    subgraph Multimodal_Vision["👁️ 2. VISION SUBSYSTEM (vision/)"]
-        IMG[Chart / Graph Image] --> DET[vision/chart_detector.py]
-        DET -->|If Chart| EXT[vision/chart_extractor.py]
-        EXT -->|Raw Linearized Table| CALC[vision/delta_calculator.py]
-        CALC -->|Concessive Sentence| VP[vision/pipeline.py]
+    subgraph Document_Ingestion["📂 2. MULTI-FORMAT INGESTION (document_parser.py)"]
+        DOC[PDF / DOCX / TXT Document] --> PARSER[Universal DocumentParser]
+        PARSER -->|Clean Text Stream| PRUN[Anchor Token Pruner]
+        PARSER -->|Embedded Visual Assets| DET[vision/chart_detector.py]
     end
 
-    subgraph RealTime_Inference["⚡ 3. REAL-TIME DECISION RUNTIME (Python & C++)"]
-        DOC[Raw Financial Doc / PDF] --> PRUN[Anchor Token Pruner]
-        VP -.->|Injected Concessive Text| PRUN
-        PRUN -->|Dense Signal Sentences| BACKBONE[FinBERT ONNX Engine]
-        ONNX_OUT -.->|Loads Model| BACKBONE
+    subgraph Multimodal_Vision["👁️ 3. VISION SUBSYSTEM (vision/)"]
+        DET -->|If Chart Detected| EXT[vision/chart_extractor.py]
+        EXT -->|Fast Heuristic / DePlot Table| CALC[vision/delta_calculator.py]
+        CALC -->|Concessive Sentence Injection| VP[vision/pipeline.py]
+        VP -.->|Injected Delta Text| PRUN
+    end
+
+    subgraph RealTime_Inference["⚡ 4. REAL-TIME DECISION RUNTIME (Python & C++)"]
+        PRUN -->|Dense Signal Sentences| BACKBONE[FinBERT ONNX Runtime]
+        ONNX_OUT -.->|Loads Model Once| BACKBONE
         BACKBONE -->|Calibrated Logits| LAYA[Laya System-1 Primitives]
         LAYA -->|Choice, Score 0-100, Noul| ERP[ERP / Policy Advisor Engine]
         ERP -->|Action Directives| ACT[Policy Action: FREEZE_PURCHASE_ORDERS / PROCEED]
     end
 
     style Offline_Training fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4
+    style Document_Ingestion fill:#1e1e2e,stroke:#a6adc8,stroke-width:2px,color:#cdd6f4
     style Multimodal_Vision fill:#181825,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4
     style RealTime_Inference fill:#11111b,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4
 ```
@@ -52,6 +57,7 @@ Here is what happens when a document containing text and a financial chart enter
 sequenceDiagram
     autonumber
     actor User as Client / Enterprise Application
+    participant Parser as document_parser.py
     participant Pipe as vision/pipeline.py
     participant Vision as vision/chart_extractor.py & delta_calc.py
     participant Pruner as text_preprocessor / AnchorPruner
@@ -59,13 +65,19 @@ sequenceDiagram
     participant Laya as laya_primitives (Choice/Score/Noul)
     participant Advisor as erp_advisor / FinancialAdvisor
 
-    User->>Pipe: Submit Document (Text + Attached Chart Image)
-    Pipe->>Vision: Process Chart Image
-    Vision-->>Pipe: "Although Revenue grew 14%, Margin dropped 22%"
-    Pipe->>Pruner: Combined Raw Text + Injected Sentence
+    User->>Parser: Submit Document (.pdf / .docx / .txt)
+    Parser->>Parser: Extract text stream & embedded visual assets
+    alt Has Embedded Visual Assets
+        Parser->>Pipe: Route extracted chart images
+        Pipe->>Vision: Fast Heuristic / DePlot Table Extraction
+        Vision-->>Pipe: "Although Revenue grew 6.7%, Margin dropped 38.9%"
+        Pipe-->>Pruner: Injected Concessive Sentence
+    else Pure Text Document
+        Parser-->>Pruner: Direct Text Stream (0ms visual overhead)
+    end
     Pruner->>Pruner: Filter out fluff; extract financial signal tokens (0.1ms)
     Pruner->>Backbone: Dense Tokens (input_ids, attention_mask)
-    Backbone->>Backbone: Single Forward Pass (~1.5ms GPU / ~10ms CPU)
+    Backbone->>Backbone: ONNX Forward Pass (~1.5ms GPU / ~10ms CPU)
     Backbone-->>Laya: Raw Output Logits [-2.1, 0.4, 3.8]
     Laya->>Laya: Temperature Scaling (T=1.25) & Softmax
     Laya->>Laya: Compute Score (0-100) & Noul Risk Probabilities (40ns)
@@ -138,39 +150,52 @@ sequenceDiagram
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│ MODULE 3: MULTIMODAL VISION SUBSYSTEM (`vision/`)                                │
+│ MODULE 3: DOCUMENT INGESTION & MULTIMODAL VISION (`document_parser.py` & `vision/`)│
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 9. `vision/chart_detector.py`
-* **What it does:** Uses Microsoft's ultra-lightweight **Florence-2** model (or fast heuristic fallbacks) to classify incoming images as *financial charts* vs. *decorative photos/logos*.
+### 9. `document_parser.py`
+* **What it does:** Universal multi-format document ingestor.
+  - **TXT:** Multi-encoding text reader (`utf-8`, `utf-8-sig`, `latin-1`, `cp1252`).
+  - **DOCX:** Extracts text paragraphs and automatically decompresses embedded chart drawings/images from `word/media/`.
+  - **PDF:** Extracts text pages and extracts high-resolution embedded raster images via `PyMuPDF` (`fitz`) / `pypdf`.
+* **Output:** `ParsedDocument(raw_text, image_paths, file_type, page_count, has_visuals)`.
+* **Why it matters:** Allows ingesting any corporate document format. If no images exist, bypasses the vision pipeline with **0ms visual overhead**.
+
+### 10. `vision/chart_detector.py`
+* **What it does:** Uses Microsoft's ultra-lightweight **Florence-2** model (with fast visual bounding-box heuristic fallback) to classify incoming images as *financial charts* vs. *decorative photos/logos*.
 * **Output:** `ChartDetectionResult(is_chart=True/False, confidence=0.98)`.
 
-### 10. `vision/chart_extractor.py`
-* **What it does:** Ingests chart images and runs **Google DePlot** (`google/deplot`) to extract raw linearized table data (`Metric | Q1 | Q2\nRevenue | 45.0 | 48.2\nMargin | 18% | 11%`).
-* **Why it matters:** Converts visual pixels into exact text without guessing.
+### 11. `vision/chart_extractor.py`
+* **What it does:** Extracts table data from charts.
+  - **Fast-Path Heuristic (Default):** Extracts period deltas in **< 5ms**.
+  - **Deep Vision (`--deep-vision`):** Runs **Google DePlot** (`google/deplot`) to generate linearized table strings.
+* **Why it matters:** Eliminates 10+ second CPU wait times for standard charts while allowing deep token autoregression when explicitly requested.
 
-### 11. `vision/delta_calculator.py`
-* **What it does:** **Zero-ML, pure Python arithmetic.** Parses the DePlot table, calculates exact percentage changes ($\Delta = \frac{v_2 - v_1}{v_1} \times 100$), and synthesizes a concessive sentence (*"Although Revenue grew 7.1%, Margin collapsed by 38.9%"*).
+### 12. `vision/delta_calculator.py`
+* **What it does:** **Zero-ML, pure Python arithmetic.** Parses the linearized table, calculates exact percentage changes ($\Delta = \frac{v_2 - v_1}{v_1} \times 100$), and synthesizes a concessive sentence (*"Although Revenue grew 6.7%, Gross Margin declined 38.9%"*).
 * **Execution Time:** **< 0.05 milliseconds.** Zero hallucination risk.
 
-### 12. `vision/pipeline.py`
-* **What it does:** The high-level vision orchestrator. Glues Detector $\to$ Extractor $\to$ Delta Calculator together. Ingests full documents with attached images and outputs enriched text ready for FinBERT.
+### 13. `vision/pipeline.py`
+* **What it does:** High-level vision orchestrator. Glues Detector $\to$ Extractor $\to$ Delta Calculator together. Enriches document text streams with concessive chart analysis before passing to FinBERT.
 
 ---
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│ MODULE 4: PYTHON DECISION ENGINE (`infer.py`)                                    │
+│ MODULE 4: REAL-TIME DECISION ENGINE (`infer.py`)                                 │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 13. `infer.py`
-* **What it does:** The complete Python runtime containing:
+### 14. `infer.py`
+* **What it does:** The complete high-performance decision runtime containing:
   1. **`AnchorTokenPruner`:** Regex pruner extracting dense signal sentences (0.1ms).
-  2. **`LayaSystem1`:** Computes `Choice`, `Score` (0-100 distress index), and `Noul` binary risk hypotheses (`liquidity_distress`, `debt_covenant_breach_risk`, `growth_momentum`, `capital_return`).
+  2. **`LayaSystem1`:** Computes `Choice`, `Score` (0-100 distress index), and `Noul` binary risk hypotheses (`liquidity_distress`, `debt_covenant_breach_risk`, `growth_momentum`, `capital_return`). Auto-detects fast ONNX Runtime.
   3. **`FinancialAdvisor`:** Applies the **Asymmetric Risk Gate (35% threshold)** and outputs strict operational action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`).
-* **Run command:** `python infer.py --test`
+  4. **Multi-Mode Execution:**
+     - **One-Shot File Evaluation:** `python infer.py --file <doc.pdf / doc.docx / doc.txt>`
+     - **Batch Directory Audit:** `python infer.py --batch <folder_path>`
+     - **Warm Interactive REPL:** `python infer.py --interactive` (Sub-10ms evaluation per document)
 
 ---
 
@@ -180,21 +205,21 @@ sequenceDiagram
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 14. `cpp/include/laya_primitives.hpp`
+### 15. `cpp/include/laya_primitives.hpp`
 * **What it does:** Header-only modern C++20 math engine. Implements Temperature Softmax ($T=1.25$), continuous Distress Index $[0, 100]$, and sigmoid-calibrated Noul propositions.
 * **Speed:** **~40 nanoseconds.**
 
-### 15. `cpp/include/inference_engine.hpp`
-* **What it does:** Direct C++ wrapper around Microsoft ONNX Runtime. Automatically initializes CPU thread pools (AVX2/VNNI vectorization) or appends the NVIDIA CUDA execution provider.
+### 16. `cpp/include/inference_engine.hpp`
+* **What it does:** Direct C++ wrapper around Microsoft ONNX Runtime with standalone simulation fallback. Automatically initializes CPU thread pools (AVX2/VNNI vectorization) or appends the NVIDIA CUDA execution provider.
 
-### 16. `cpp/include/text_preprocessor.hpp`
+### 17. `cpp/include/text_preprocessor.hpp`
 * **What it does:** C++ regex-based anchor token pruner. Compresses multi-page documents down to dense financial signal sentences before tokenization.
 
-### 17. `cpp/include/erp_advisor.hpp`
+### 18. `cpp/include/erp_advisor.hpp`
 * **What it does:** Deterministic rule engine in C++ that maps Laya risk grades into formatted audit reports and operational policy flags.
 
-### 18. `cpp/src/main.cpp` & `cpp/CMakeLists.txt`
-* **What it does:** C++ executable entry point with built-in test suite executing all 5 financial distress scenarios.
+### 19. `cpp/src/main.cpp` & `cpp/CMakeLists.txt`
+* **What it does:** C++ executable entry point with built-in test suite executing complex multi-clause enterprise scenarios.
 
 ---
 
@@ -209,7 +234,8 @@ Use this matrix to understand what breaks if you edit a file:
 | `complex_sentence_injector.py` | None | `build_rich_dataset.py` | Changes adversarial concessive conjunctions |
 | `build_rich_dataset.py` | `data/*.jsonl` | `train.py`, `soup.yaml` | **Changes training distribution & class balance** |
 | `train.py` / `soup.yaml` | `data/train.jsonl` | `eval.py`, `export_onnx.py` | **Changes model neural weights (`./output`)** |
-| `export_onnx.py` | `./output/` | `infer.py --onnx`, `cpp/` | **Updates `finbert.onnx` for Python & C++** |
+| `export_onnx.py` | `./output/` | `infer.py`, `cpp/` | **Updates `finbert.onnx` for Python & C++** |
+| `document_parser.py` | Local files (.pdf/.docx/.txt) | `infer.py` | Changes text & visual asset extraction |
 | `vision/delta_calculator.py`| Table strings | `vision/pipeline.py` | Changes mathematical delta phrasing |
 | `vision/pipeline.py` | `vision/*` | `infer.py` | Changes multimodal document ingestion |
 | `laya_primitives.hpp` | Raw logits | `main.cpp`, ERP Advisor | **Changes Laya score math & risk calibration** |
@@ -219,34 +245,55 @@ Use this matrix to understand what breaks if you edit a file:
 
 ## ⚡ 5. Execution Recipes for Teammates
 
-### Recipe 1: Rebuilding the Dataset from Scratch
+### Recipe 1: Fast One-Shot Document Evaluation
 ```bash
+# Evaluate any PDF, Word (.docx), or Text (.txt) report:
+python infer.py --file data/sample_reports/covenant_breach.pdf
+python infer.py --file data/sample_reports/healthy_report.docx
+python infer.py --file data/sample_reports/distress_report.txt
+
+# Evaluate a multimodal document with embedded charts:
+python infer.py --file data/sample_reports/multimodal_report.docx
+
+# Optional deep vision autoregression:
+python infer.py --file data/sample_reports/multimodal_report.docx --deep-vision
+```
+
+### Recipe 2: Warm Interactive REPL Session (Sub-10ms per document)
+```bash
+python infer.py --interactive
+# At the virdixt > prompt, type any filename or text commentary!
+```
+
+### Recipe 3: Multi-Document Batch Directory Audit
+```bash
+python infer.py --batch data/sample_reports/
+```
+
+### Recipe 4: Direct Text Analysis
+```bash
+python infer.py --text "Supplier defaulted on obligations leading to $5M inventory write-down."
+```
+
+### Recipe 5: Rebuilding Dataset & Fine-Tuning
+```bash
+# Rebuild dataset:
 python prepare_data.py
 python synthetic_builder.py
 python complex_sentence_injector.py
 python build_rich_dataset.py
-```
 
-### Recipe 2: Fine-Tuning the Model
-```bash
-# Using Soup CLI:
-soup train --config soup.yaml
-
-# OR Standalone:
+# Fine-tune model:
 python train.py
+# OR: soup train --config soup.yaml
 ```
 
-### Recipe 3: Testing the Python Decision Engine
-```bash
-python infer.py --test
-```
-
-### Recipe 4: Exporting to ONNX & Quantizing
+### Recipe 6: Exporting to ONNX & Quantizing
 ```bash
 python export_onnx.py --quantize
 ```
 
-### Recipe 5: Compiling & Running the C++ Engine
+### Recipe 7: Compiling & Running C++ Engine
 ```bash
 cd cpp
 cmake -B build
@@ -257,7 +304,9 @@ cmake --build build --config Release
 ---
 
 ## 🎯 Summary for Teammates
+* **To add support for new file formats (e.g. HTML, RTF):** Extend `document_parser.py`.
 * **To improve accuracy on complex statements:** Edit `complex_sentence_injector.py`.
 * **To add new corporate accounting phrases:** Edit `synthetic_builder.py`.
 * **To adjust distress sensitivity & thresholds:** Edit the risk gates in `infer.py` and `cpp/include/laya_primitives.hpp`.
 * **To modify ERP action flags:** Edit `cpp/include/erp_advisor.hpp` and `FinancialAdvisor` in `infer.py`.
+

@@ -56,34 +56,34 @@ Here is what happens when a document containing text and a financial chart enter
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Client / Enterprise Application
+    actor User as Client Application
     participant Parser as document_parser.py
     participant Pipe as vision/pipeline.py
-    participant Vision as vision/chart_extractor.py & delta_calc.py
-    participant Pruner as text_preprocessor / AnchorPruner
+    participant Vision as vision/chart_extractor.py
+    participant Pruner as AnchorTokenPruner
     participant Backbone as FinBERT (ONNX Runtime)
-    participant Laya as laya_primitives (Choice/Score/Noul)
-    participant Advisor as erp_advisor / FinancialAdvisor
+    participant Laya as Laya System-1 Primitives
+    participant Advisor as Financial Advisor Engine
 
-    User->>Parser: Submit Document (.pdf / .docx / .txt)
-    Parser->>Parser: Extract text stream & embedded visual assets
+    User->>Parser: Ingest Document (.pdf / .docx / .txt)
+    Parser->>Parser: Extract text stream and visual assets
     alt Has Embedded Visual Assets
-        Parser->>Pipe: Route extracted chart images
-        Pipe->>Vision: Fast Heuristic / DePlot Table Extraction
-        Vision-->>Pipe: "Although Revenue grew 6.7%, Margin dropped 38.9%"
-        Pipe-->>Pruner: Injected Concessive Sentence
+        Parser->>Pipe: Route extracted chart image
+        Pipe->>Vision: Extract chart table values
+        Vision-->>Pipe: Synthesize concessive sentence
+        Pipe-->>Pruner: Forward enriched document text
     else Pure Text Document
-        Parser-->>Pruner: Direct Text Stream (0ms visual overhead)
+        Parser-->>Pruner: Forward raw text (0ms vision overhead)
     end
-    Pruner->>Pruner: Filter out fluff; extract financial signal tokens (0.1ms)
-    Pruner->>Backbone: Dense Tokens (input_ids, attention_mask)
-    Backbone->>Backbone: ONNX Forward Pass (~1.5ms GPU / ~10ms CPU)
-    Backbone-->>Laya: Raw Output Logits [-2.1, 0.4, 3.8]
-    Laya->>Laya: Temperature Scaling (T=1.25) & Softmax
-    Laya->>Laya: Compute Score (0-100) & Noul Risk Probabilities (40ns)
-    Laya-->>Advisor: LayaVerdict(Choice=NEGATIVE, Score=88.5, P_covenant=0.95)
-    Advisor->>Advisor: Evaluate Asymmetric Risk Gate (>35% negative)
-    Advisor-->>User: PolicyAction: FREEZE_PURCHASE_ORDERS (CRITICAL / TIER 4)
+    Pruner->>Pruner: Filter text to dense financial signal sentences
+    Pruner->>Backbone: Send input tokens (input_ids, attention_mask)
+    Backbone->>Backbone: Execute ONNX forward pass
+    Backbone-->>Laya: Raw output classification logits
+    Laya->>Laya: Apply temperature scaling (T=1.25) and compute softmax
+    Laya->>Laya: Compute continuous distress score (0-100) and Noul probabilities
+    Laya-->>Advisor: Deliver LayaVerdict payload
+    Advisor->>Advisor: Evaluate asymmetric risk threshold (>35% negative)
+    Advisor-->>User: Output ERP Policy Action and Audit Recommendations
 ```
 
 ---

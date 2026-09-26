@@ -5,9 +5,9 @@ from .chart_extractor import ChartExtractor
 from .delta_calculator import parse_deplot_table, compute_deltas, format_concessive_sentence
 
 class VisionPipeline:
-    def __init__(self):
+    def __init__(self, deep_vision: bool = False):
         self.detector = ChartDetector()
-        self.extractor = ChartExtractor()
+        self.extractor = ChartExtractor(deep_vision=deep_vision)
         
     def process_image(self, image_path: str) -> str:
         t0 = time.time()
@@ -28,7 +28,7 @@ class VisionPipeline:
         sentence = format_concessive_sentence(deltas)
         
         t_total = time.time() - t0
-        print(f"[VisionPipeline] Processed image in {t_total*1000:.2f}ms")
+        print(f"[VisionPipeline] Processed image ({ext_result.extraction_method}) in {t_total*1000:.2f}ms")
         
         return sentence
 

@@ -8,6 +8,7 @@ from .absa_engine import ABSAEngine, AspectResult
 from .linguistic_hedging import LinguisticHedgingDetector, HedgingAnalysisResult
 from .discourse_parser import RhetoricalDiscourseParser, DiscourseAnalysisResult
 from .forensic_accounting import ForensicAccountingEngine, ForensicScoreResult
+from .fusion import FusionRuleEngine, FusionEvaluation, LaneScores
 
 __all__ = [
     "ABSAEngine",
@@ -18,4 +19,8 @@ __all__ = [
     "DiscourseAnalysisResult",
     "ForensicAccountingEngine",
     "ForensicScoreResult",
+    "FusionRuleEngine",
+    "FusionEvaluation",
+    "LaneScores",
 ]
+

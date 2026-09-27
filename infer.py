@@ -59,6 +59,9 @@ from nlp import (
     DiscourseAnalysisResult,
     ForensicAccountingEngine,
     ForensicScoreResult,
+    FusionRuleEngine,
+    FusionEvaluation,
+    LaneScores,
 )
 
 
@@ -76,7 +79,9 @@ class AdvisorResult:
     hedging_result: Optional[HedgingAnalysisResult] = None
     discourse_result: Optional[DiscourseAnalysisResult] = None
     forensic_scores: Optional[ForensicScoreResult] = None
+    fusion_eval: Optional[FusionEvaluation] = None
     inference_time_ms: float = 0.0
+
 
 
 
@@ -218,6 +223,7 @@ class FinancialAdvisor:
         self.hedging_detector = LinguisticHedgingDetector()
         self.discourse_parser = RhetoricalDiscourseParser()
         self.forensic_engine = ForensicAccountingEngine()
+        self.fusion_engine = FusionRuleEngine()
 
     def advise(self, document: str, financial_dict: Optional[Dict[str, float]] = None) -> AdvisorResult:
         t0 = time.time()
@@ -233,15 +239,26 @@ class FinancialAdvisor:
         probs = self.system1.get_calibrated_probs(pruned_text)
         t_sys1 = time.time() - t1
 
-        # Run Advanced NLP & Computational Linguistics Audits
+        # Run Advanced NLP & Computational Linguistics Audits (All 5 Lanes)
         absa_results = self.absa_engine.evaluate(document)
         hedging_res = self.hedging_detector.analyze(document)
         discourse_res = self.discourse_parser.parse(document)
         forensic_res = self.forensic_engine.compute(financial_dict or {})
 
-        neg_prob = probs["negative"]
+        # Evaluate 5-Lane Composite Fusion & Guardrail Rules
+        fusion_eval = self.fusion_engine.evaluate_lanes(
+            sentiment_probs=probs,
+            sentiment_score=score_val,
+            absa_results=absa_results,
+            forensic_scores=forensic_res,
+            discourse_res=discourse_res,
+            hedging_res=hedging_res,
+        )
 
-        if score_val > 75 or neg_prob > 0.60:
+        composite_score = fusion_eval.composite_distress_score
+
+        # Determine Final Institutional Verdict from 5-Lane Composite Score & Overrides
+        if composite_score >= 70.0:
             risk_grade = RiskGrade.CRITICAL
             exposure_tier = ExposureTier.TIER_4_BLOCKED
             action_flag = PolicyActionFlag.FREEZE_PURCHASE_ORDERS
@@ -250,7 +267,7 @@ class FinancialAdvisor:
                 "CREDIT: Require 100% upfront cash or irrevocable letters of credit.",
                 "AUDIT: Request immediate debt covenant compliance certificate."
             ]
-        elif neg_prob > 0.35 or score_val > 40:
+        elif composite_score >= 40.0:
             risk_grade = RiskGrade.WARNING
             exposure_tier = ExposureTier.TIER_3_WARNING
             action_flag = PolicyActionFlag.FLAG_FOR_REVIEW
@@ -259,7 +276,7 @@ class FinancialAdvisor:
                 "Request updated debt covenant compliance certificates from lenders.",
                 "Cap maximum single transaction exposure to $25,000."
             ]
-        elif score_val > 20:
+        elif composite_score >= 20.0:
             risk_grade = RiskGrade.MONITOR
             exposure_tier = ExposureTier.TIER_2_MONITOR
             action_flag = PolicyActionFlag.PROCEED_NORMAL
@@ -276,6 +293,10 @@ class FinancialAdvisor:
                 "Approved for preferred volume discount and standard Net-30/Net-60 terms."
             ]
 
+        # Append Lane-Specific Governance Directives if triggered
+        for note in fusion_eval.governance_notes:
+            recs.append(f"GOVERNANCE DIRECTIVE: {note}")
+
         total_time_ms = (t_prune + t_sys1) * 1000.0
 
         return AdvisorResult(
@@ -284,13 +305,14 @@ class FinancialAdvisor:
             action_flag=action_flag,
             action_recommendations=recs,
             sentiment_choice=choice_val,
-            distress_score=score_val,
+            distress_score=composite_score,
             noul=noul_val,
             calibrated_probs=probs,
             absa_results=absa_results,
             hedging_result=hedging_res,
             discourse_result=discourse_res,
             forensic_scores=forensic_res,
+            fusion_eval=fusion_eval,
             inference_time_ms=total_time_ms
         )
 
@@ -310,12 +332,12 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
     table.add_column("Verdict / Calibrated Value", style="white")
 
     table.add_row("Sentiment Choice", f"[{'red' if res.sentiment_choice=='NEGATIVE' else 'green' if res.sentiment_choice=='POSITIVE' else 'yellow'}]{res.sentiment_choice}[/]")
-    table.add_row("Distress Index Score", f"{res.distress_score:.1f} / 100.0 (0=Peak Health, 100=Insolvency)")
+    table.add_row("Composite Distress Score", f"[bold {grade_color}]{res.distress_score:.1f}[/] / 100.0 (5-Lane Fused Index)")
     table.add_row("Calibrated Probabilities", f"Neg: {res.calibrated_probs['negative']*100:.1f}% | Neu: {res.calibrated_probs['neutral']*100:.1f}% | Pos: {res.calibrated_probs['positive']*100:.1f}%")
-    table.add_row("Risk Grade", f"[{grade_color}]{res.risk_grade.value}[/{grade_color}]")
-    table.add_row("Exposure Tier", f"[{grade_color}]{res.exposure_tier.value}[/{grade_color}]")
+    table.add_row("Institutional Risk Grade", f"[{grade_color}]{res.risk_grade.value}[/{grade_color}]")
+    table.add_row("ERP Exposure Tier", f"[{grade_color}]{res.exposure_tier.value}[/{grade_color}]")
     table.add_row("ERP Policy Action", f"[{grade_color}]{res.action_flag.value}[/{grade_color}]")
-    table.add_row("Inference Latency", f"[bold green]{res.inference_time_ms:.2f} ms[/]")
+    table.add_row("Pipeline Latency", f"[bold green]{res.inference_time_ms:.2f} ms[/]")
 
     noul_str = (
         f"- Liquidity Distress Risk   : {res.noul.liquidity_distress:.1f}%\n"
@@ -328,7 +350,39 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
     console.print()
     console.print(table)
 
-    # 2. Aspect-Based Financial Sentiment Table (ABSA)
+    # 2. 5-Lane Composite Fusion & Governance Matrix Table
+    if res.fusion_eval:
+        f_eval = res.fusion_eval
+        fusion_table = Table(title="🎛️ 5-Lane Multi-Factor Risk Fusion & Governance Matrix", style="cyan")
+        fusion_table.add_column("Analytical Lane", style="bold cyan", width=26)
+        fusion_table.add_column("Lane Distress", style="white", width=16)
+        fusion_table.add_column("Active Weight", style="white", width=14)
+        fusion_table.add_column("Weighted Contribution", style="white")
+
+        lanes = [
+            ("1. Sentiment & NOUL", f_eval.lane_scores.sentiment_distress, f_eval.active_weights.get("sentiment", 0)),
+            ("2. Aspect-Based ABSA", f_eval.lane_scores.aspect_distress, f_eval.active_weights.get("aspect", 0)),
+            ("3. Forensic Accounting", f_eval.lane_scores.forensic_distress, f_eval.active_weights.get("forensic", 0)),
+            ("4. RST Discourse Masking", f_eval.lane_scores.discourse_distress, f_eval.active_weights.get("discourse", 0)),
+            ("5. Hedging & Obfuscation", f_eval.lane_scores.hedging_distress, f_eval.active_weights.get("hedging", 0)),
+        ]
+
+        for lane_name, lane_score, weight in lanes:
+            contrib = lane_score * weight
+            c_color = "red" if lane_score > 60 else "yellow" if lane_score > 30 else "green"
+            fusion_table.add_row(
+                lane_name,
+                f"[{c_color}]{lane_score:.1f}%[/{c_color}]",
+                f"{weight*100:.0f}%",
+                f"{contrib:.1f} pts"
+            )
+
+        fusion_table.add_section()
+        escalate_text = f"[bold red]YES ({len(f_eval.triggered_rules)} rules)[/]" if f_eval.escalation_applied else "[green]NO (Standard)[/]"
+        fusion_table.add_row("[bold]Composite Score (Fused)[/]", f"[bold {grade_color}]{f_eval.composite_distress_score:.1f}%[/]", "100%", f"Escalations: {escalate_text}")
+        console.print(fusion_table)
+
+    # 3. Aspect-Based Financial Sentiment Table (ABSA)
     if res.absa_results:
         absa_table = Table(title="🔍 Aspect-Based Sentiment & Multi-Entity Risk (ABSA)", style="magenta")
         absa_table.add_column("Financial Aspect", style="bold cyan", width=26)
@@ -355,7 +409,7 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
             )
         console.print(absa_table)
 
-    # 3. Linguistic Deception & Hedging Audit Panel
+    # 4. Linguistic Deception & Hedging Audit Panel
     if res.hedging_result and (res.hedging_result.hedging_score > 0 or res.hedging_result.gunning_fog_index > 0):
         h = res.hedging_result
         h_color = "red" if h.hedging_level in ["EXTREME_EVASION", "HIGH_UNCERTAINTY"] else "yellow" if h.hedging_level == "MODERATE" else "green"
@@ -373,7 +427,7 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
         )
         console.print(hedge_panel)
 
-    # 4. Rhetorical Discourse & Concessive Nucleus Breakdown
+    # 5. Rhetorical Discourse & Concessive Nucleus Breakdown
     if res.discourse_result and res.discourse_result.has_concessive_structures:
         d = res.discourse_result
         deceptive_pairs = [p for p in d.pairs if p.is_deceptive_buffer]
@@ -389,7 +443,7 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
         disc_panel = Panel("\n".join(disc_text), title="⚖️ Rhetorical Structure Theory (RST) Discourse Analysis", style="cyan")
         console.print(disc_panel)
 
-    # 5. Deterministic Forensic Accounting Suite (Altman Z + Beneish M + Piotroski F)
+    # 6. Deterministic Forensic Accounting Suite (Altman Z + Beneish M + Piotroski F)
     if res.forensic_scores and res.forensic_scores.calculated:
         f = res.forensic_scores
         z_color = "red" if "DISTRESS" in f.altman_zone else "yellow" if "GREY" in f.altman_zone else "green"
@@ -406,11 +460,12 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
         forensic_table.add_row("Piotroski F-Score", f"{f.piotroski_f_score} / 9" if f.piotroski_f_score is not None else "N/A", f"[{f_color}]{f.piotroski_grade}[/{f_color}]")
         console.print(forensic_table)
 
-    # 6. Action Recommendations
+    # 7. Action Recommendations & Governance Alerts
     recs_str = "\n".join([f"• {r}" for r in res.action_recommendations])
     rec_panel = Panel(recs_str, title="🛡️ ERP Policy Directives & Commercial Actions", style=grade_color)
     console.print(rec_panel)
     console.print()
+
 
 
 def process_file_input(file_path: str, advisor: FinancialAdvisor, deep_vision: bool = False):

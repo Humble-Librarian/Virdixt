@@ -8,3 +8,7 @@ tmp_a/
 tmp_b/
 *.zip
 .env
+ponytail/
+.claude/
+.venv/
+

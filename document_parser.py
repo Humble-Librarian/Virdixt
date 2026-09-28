@@ -23,6 +23,8 @@ class ParsedDocument:
     has_visuals: bool = False
     financial_dict: Dict[str, float] = field(default_factory=dict)
     temp_dir: Optional[str] = None
+    is_scanned: bool = False
+    ocr_pages: int = 0
 
     def cleanup(self):
         """Removes extracted temporary image files."""
@@ -193,22 +195,61 @@ class DocumentParser:
         )
 
     @staticmethod
-    def parse_pdf(file_path: str, extract_images: bool = True) -> ParsedDocument:
-        """Parses PDF documents, extracting page text and embedded images/charts."""
+    def parse_pdf(file_path: str, extract_images: bool = True, ocr_fallback: bool = True) -> ParsedDocument:
+        """Parses PDF documents, extracting page text and embedded images/charts.
+        
+        Uses a zero-tax hybrid pipeline:
+        - Digital Vector Text (<5ms) for clean pages.
+        - Automatic Scanned-Page Detector + OpenCV Optical Enhancement + RapidOCR for degraded scans.
+        """
         text_chunks = []
         image_paths = []
         temp_dir = tempfile.mkdtemp(prefix="virdixt_pdf_")
         page_count = 0
+        ocr_pages = 0
+        is_scanned_doc = False
 
         # Method A: PyMuPDF (fitz) - ultra-fast text and high-res image extraction
         try:
             import fitz  # PyMuPDF
+            import numpy as np
             doc = fitz.open(file_path)
             page_count = len(doc)
             
             for page_num in range(page_count):
                 page = doc[page_num]
-                text_chunks.append(page.get_text())
+                page_text = page.get_text().strip()
+
+                # Check if page has digital text or is a scanned/image-only page
+                if len(page_text) >= 20 or not ocr_fallback:
+                    text_chunks.append(page_text)
+                else:
+                    # Trigger Zero-Tax Lazy OCR Fallback for scanned/blurry page
+                    try:
+                        from vision.ocr_engine import ocr_document_page
+                        # Render high-resolution pixmap (200 DPI) for optical restoration
+                        pix = page.get_pixmap(dpi=200)
+                        img_array = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
+                        
+                        # Convert RGBA to RGB if needed
+                        if pix.n == 4:
+                            import cv2
+                            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGBA2BGR)
+                        elif pix.n == 3:
+                            import cv2
+                            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+
+                        ocr_text = ocr_document_page(img_array, enhance=True)
+                        if ocr_text.strip():
+                            text_chunks.append(ocr_text.strip())
+                            ocr_pages += 1
+                            is_scanned_doc = True
+                        elif page_text:
+                            text_chunks.append(page_text)
+                    except Exception as ocr_err:
+                        # Fallback to whatever raw text exists
+                        if page_text:
+                            text_chunks.append(page_text)
 
                 if extract_images:
                     image_list = page.get_images(full=True)
@@ -234,7 +275,9 @@ class DocumentParser:
                 file_type="PDF",
                 page_count=page_count,
                 has_visuals=len(image_paths) > 0,
-                temp_dir=temp_dir
+                temp_dir=temp_dir,
+                is_scanned=is_scanned_doc,
+                ocr_pages=ocr_pages
             )
         except ImportError:
             pass
@@ -269,6 +312,33 @@ class DocumentParser:
             return ParsedDocument(
                 raw_text=f"Error extracting PDF: {e}",
                 file_type="PDF_ERROR",
+                temp_dir=temp_dir
+            )
+
+    @staticmethod
+    def parse_image(file_path: str) -> ParsedDocument:
+        """Parses standalone document scans or photo receipts (PNG, JPG, TIFF, BMP) via RapidOCR + OpenCV."""
+        from vision.ocr_engine import ocr_document_page
+        temp_dir = tempfile.mkdtemp(prefix="virdixt_img_")
+        
+        try:
+            extracted_text = ocr_document_page(file_path, enhance=True)
+            return ParsedDocument(
+                raw_text=extracted_text,
+                image_paths=[file_path],
+                file_type="IMAGE",
+                page_count=1,
+                has_visuals=True,
+                is_scanned=True,
+                ocr_pages=1,
+                temp_dir=temp_dir
+            )
+        except Exception as e:
+            return ParsedDocument(
+                raw_text=f"Error OCR parsing image: {e}",
+                image_paths=[file_path],
+                file_type="IMAGE_ERROR",
+                page_count=1,
                 temp_dir=temp_dir
             )
 
@@ -322,7 +392,7 @@ class DocumentParser:
 
     @classmethod
     def parse(cls, file_path: str, extract_images: bool = True) -> ParsedDocument:
-        """Auto-detects format and parses PDF, DOCX, CSV, EXCEL, or TXT document."""
+        """Auto-detects format and parses PDF, DOCX, CSV, EXCEL, TXT, or standalone IMAGE document."""
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -336,6 +406,8 @@ class DocumentParser:
             return cls.parse_csv(file_path)
         elif ext in [".xlsx", ".xlsm", ".xltx", ".xltm", ".xls"]:
             return cls.parse_excel(file_path, extract_images=extract_images)
+        elif ext in [".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".webp"]:
+            return cls.parse_image(file_path)
         elif ext in [".txt", ".md", ".json", ".log"]:
             return cls.parse_txt(file_path)
         else:

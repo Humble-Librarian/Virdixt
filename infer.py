@@ -81,6 +81,7 @@ class AdvisorResult:
     forensic_scores: Optional[ForensicScoreResult] = None
     fusion_eval: Optional[FusionEvaluation] = None
     inference_time_ms: float = 0.0
+    priority_index: float = 0.0
 
 
 
@@ -225,13 +226,15 @@ class FinancialAdvisor:
         self.forensic_engine = ForensicAccountingEngine()
         self.fusion_engine = FusionRuleEngine()
 
-    def advise(self, document: str, financial_dict: Optional[Dict[str, float]] = None) -> AdvisorResult:
+    def advise(self, document: str, financial_dict: Optional[Dict[str, float]] = None, exposure_value: float = 0.0, show_trace: bool = False) -> AdvisorResult:
+        if show_trace: console.print("\n[dim][1/6] Pruning document for anchor tokens...[/dim]")
         t0 = time.time()
         pruned_text = self.pruner.prune(document)
         if not pruned_text:
             pruned_text = document
         t_prune = time.time() - t0
 
+        if show_trace: console.print("[dim][2/6] Running FinBERT neural classification...[/dim]")
         t1 = time.time()
         choice_val = self.system1.choice(pruned_text)
         score_val = self.system1.score(pruned_text)
@@ -240,9 +243,17 @@ class FinancialAdvisor:
         t_sys1 = time.time() - t1
 
         # Run Advanced NLP & Computational Linguistics Audits (All 5 Lanes)
+        # Run Advanced NLP & Computational Linguistics Audits
+        if show_trace: console.print("[dim][3/6] Running Aspect-Based Sentiment (ABSA)...[/dim]")
         absa_results = self.absa_engine.evaluate(document)
+        
+        if show_trace: console.print("[dim][4/6] Running Hedging & Deception audit...[/dim]")
         hedging_res = self.hedging_detector.analyze(document)
+        
+        if show_trace: console.print("[dim][5/6] Parsing Rhetorical Discourse...[/dim]")
         discourse_res = self.discourse_parser.parse(document)
+        
+        if show_trace: console.print("[dim][6/6] Computing Forensic Accounting metrics...[/dim]")
         forensic_res = self.forensic_engine.compute(financial_dict or {})
 
         # Evaluate 5-Lane Composite Fusion & Guardrail Rules
@@ -298,6 +309,7 @@ class FinancialAdvisor:
             recs.append(f"GOVERNANCE DIRECTIVE: {note}")
 
         total_time_ms = (t_prune + t_sys1) * 1000.0
+        priority_index = (score_val / 100.0) * exposure_value
 
         return AdvisorResult(
             risk_grade=risk_grade,
@@ -314,6 +326,8 @@ class FinancialAdvisor:
             forensic_scores=forensic_res,
             fusion_eval=fusion_eval,
             inference_time_ms=total_time_ms
+            inference_time_ms=total_time_ms,
+            priority_index=priority_index
         )
 
 
@@ -337,7 +351,9 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
     table.add_row("Institutional Risk Grade", f"[{grade_color}]{res.risk_grade.value}[/{grade_color}]")
     table.add_row("ERP Exposure Tier", f"[{grade_color}]{res.exposure_tier.value}[/{grade_color}]")
     table.add_row("ERP Policy Action", f"[{grade_color}]{res.action_flag.value}[/{grade_color}]")
-    table.add_row("Pipeline Latency", f"[bold green]{res.inference_time_ms:.2f} ms[/]")
+    if res.priority_index > 0:
+        table.add_row("Priority (Risk × Exposure)", f"[bold red]${res.priority_index:,.2f}[/bold red]")
+    table.add_row("Inference Latency", f"[bold green]{res.inference_time_ms:.2f} ms[/]")
 
     noul_str = (
         f"- Liquidity Distress Risk   : {res.noul.liquidity_distress:.1f}%\n"
@@ -492,7 +508,7 @@ def process_file_input(file_path: str, advisor: FinancialAdvisor, deep_vision: b
     else:
         console.print("[dim][+] Pure text report: Vision pipeline bypassed (0ms visual overhead).[/dim]")
 
-    result = advisor.advise(final_text, financial_dict=getattr(parsed, "financial_dict", None))
+    result = advisor.advise(final_text, financial_dict=getattr(parsed, "financial_dict", None), exposure_value=args.exposure, show_trace=not args.quiet)
     display_advisor_report(result, source_title=os.path.basename(file_path))
     parsed.cleanup()
     return result
@@ -523,7 +539,7 @@ def run_interactive_mode(advisor: FinancialAdvisor, deep_vision: bool = False):
                 process_file_input(clean_path, advisor, deep_vision=deep_vision)
             else:
                 # Direct text evaluation
-                res = advisor.advise(user_input)
+                res = advisor.advise(user_input, exposure_value=args.exposure, show_trace=not args.quiet)
                 display_advisor_report(res, source_title="Interactive Prompt")
         except KeyboardInterrupt:
             console.print("\n[dim]Session terminated.[/dim]")
@@ -564,7 +580,7 @@ def run_batch_directory(dir_path: str, advisor: FinancialAdvisor, deep_vision: b
             from vision.pipeline import VisionPipeline
             vision = VisionPipeline(deep_vision=deep_vision)
             final_text = vision.process_document(parsed.raw_text, parsed.image_paths)
-        res = advisor.advise(final_text)
+        res = advisor.advise(final_text, exposure_value=args.exposure, show_trace=not args.quiet)
         parsed.cleanup()
 
         color = "red" if res.risk_grade == RiskGrade.CRITICAL else "yellow" if res.risk_grade == RiskGrade.WARNING else "green"
@@ -609,6 +625,8 @@ if __name__ == "__main__":
     parser.add_argument("--pytorch", action="store_true", help="Force PyTorch backend")
     parser.add_argument("--deep-vision", action="store_true", help="Enable deep Google DePlot token autoregression")
     parser.add_argument("--test", action="store_true", help="Run validation scenario benchmarks")
+    parser.add_argument("--exposure", type=float, default=0.0, help="Dollar exposure amount for risk priority calculation")
+    parser.add_argument("--quiet", action="store_true", help="Hide processing trace pipeline steps")
     args = parser.parse_args()
 
     # Determine backend: ONNX by default if available unless --pytorch is set

@@ -325,7 +325,6 @@ class FinancialAdvisor:
             discourse_result=discourse_res,
             forensic_scores=forensic_res,
             fusion_eval=fusion_eval,
-            inference_time_ms=total_time_ms
             inference_time_ms=total_time_ms,
             priority_index=priority_index
         )

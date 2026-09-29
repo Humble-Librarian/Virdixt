@@ -33,19 +33,20 @@
 }
 
 /* ── 2. Platinum Light Theme ── */
+/* Gold enhanced: #C8890F → richer amber-gold for readability on white backgrounds */
 [data-theme="light"] {
   --bg-base:              #F8F9FA;
   --bg-surface:           #FFFFFF;
   --bg-surface-elevated:  #F3F4F6;
   --border-subtle:        rgba(0, 0, 0, 0.08);
-  --border-highlight:     rgba(184, 134, 11, 0.40);
+  --border-highlight:     rgba(200, 137, 15, 0.45);
   --text-primary:         #111827;
   --text-secondary:       #4B5563;
-  --text-muted:           #9CA3AF;
-  --accent-gold:          #B8860B;
-  --accent-gold-hover:    #966D07;
-  --accent-gold-glow:     rgba(184, 134, 11, 0.08);
-  --accent-gold-glow-h:   rgba(184, 134, 11, 0.18);
+  --text-muted:           #6B7280;
+  --accent-gold:          #C8890F;
+  --accent-gold-hover:    #A36D09;
+  --accent-gold-glow:     rgba(200, 137, 15, 0.10);
+  --accent-gold-glow-h:   rgba(200, 137, 15, 0.20);
   --status-danger:        #DC2626;
   --status-warning:       #D97706;
   --status-success:       #059669;
@@ -482,3 +483,372 @@ body {
   .exposure-row { flex-direction: column; align-items: flex-start; }
   .exposure-input { max-width: 100%; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   PHASE 3 — AUDIT DASHBOARD COMPONENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 18. Dashboard entrance animation ── */
+.result-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: slide-up 0.35s ease;
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 19. Verdict Banner ── */
+.verdict-banner {
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+.verdict-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.04;
+  pointer-events: none;
+}
+.verdict-banner.grade-CRITICAL {
+  background: var(--bg-surface);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+.verdict-banner.grade-CRITICAL::before { background: var(--status-danger); opacity: 0.06; }
+.verdict-banner.grade-WARNING {
+  background: var(--bg-surface);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+.verdict-banner.grade-WARNING::before { background: var(--status-warning); opacity: 0.06; }
+.verdict-banner.grade-MONITOR {
+  background: var(--bg-surface);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+.verdict-banner.grade-MONITOR::before { background: var(--status-info); opacity: 0.06; }
+.verdict-banner.grade-MINIMAL {
+  background: var(--bg-surface);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.verdict-banner.grade-MINIMAL::before { background: var(--status-success); opacity: 0.06; }
+
+.verdict-left { display: flex; flex-direction: column; gap: 6px; }
+.verdict-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.verdict-grade {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+.verdict-grade.grade-CRITICAL { color: var(--status-danger); }
+.verdict-grade.grade-WARNING  { color: var(--status-warning); }
+.verdict-grade.grade-MONITOR  { color: var(--status-info); }
+.verdict-grade.grade-MINIMAL  { color: var(--status-success); }
+
+.verdict-interpretation {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.verdict-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.verdict-score-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.verdict-score-num {
+  font-size: 40px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1;
+  color: var(--accent-gold);
+}
+.verdict-score-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.verdict-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.verdict-override {
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--status-danger);
+  width: 100%;
+}
+
+/* ── 20. Lane Grid (2-col) ── */
+.lane-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 860px) {
+  .lane-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 21. Quantitative Table ── */
+.quant-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.quant-table th {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.quant-table td {
+  padding: 13px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+.quant-table tr:last-child td { border-bottom: none; }
+.quant-table tr:hover td { background: var(--accent-gold-glow); }
+
+.quant-score {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.quant-formula {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+.status-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.chip-danger  { background: rgba(239,68,68,0.12);   color: var(--status-danger); }
+.chip-success { background: rgba(16,185,129,0.12);  color: var(--status-success); }
+.chip-warning { background: rgba(245,158,11,0.12);  color: var(--status-warning); }
+.chip-neutral { background: var(--bg-surface-elevated); color: var(--text-muted); }
+
+/* ── 22. NLP Sentiment Panel ── */
+.sentiment-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.sentiment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.sentiment-row:last-child { border-bottom: none; }
+.sentiment-key { color: var(--text-secondary); }
+.sentiment-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.prob-bar-wrap {
+  padding: 10px 22px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.prob-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.prob-bar-label { color: var(--text-muted); width: 68px; }
+.prob-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-surface-elevated);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.prob-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.fill-neg { background: var(--status-danger); }
+.fill-neu { background: var(--text-muted); }
+.fill-pos { background: var(--status-success); }
+.prob-bar-pct {
+  width: 36px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.trigger-chips {
+  padding: 12px 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.trigger-chip {
+  padding: 3px 10px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+/* ── 23. Masking Callouts ── */
+.masking-empty {
+  padding: 28px 22px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.callout-item {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.callout-item:last-child { border-bottom: none; }
+.callout-sentence {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-style: italic;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.06);
+  border-left: 3px solid var(--status-warning);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.callout-explanation {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.callout-score {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--status-warning);
+  font-weight: 600;
+}
+
+/* ── 24. Recommendations Panel ── */
+.rec-list {
+  padding: 6px 0;
+}
+.rec-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 22px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.rec-item:last-child { border-bottom: none; }
+.rec-bullet {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-gold-glow);
+  border: 1px solid var(--border-highlight);
+  color: var(--accent-gold);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── 25. Action / Policy Banner ── */
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+.action-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  min-width: 130px;
+}
+.action-value {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.action-value.grade-CRITICAL { color: var(--status-danger); }
+.action-value.grade-WARNING  { color: var(--status-warning); }
+.action-value.grade-MONITOR  { color: var(--status-info); }
+.action-value.grade-MINIMAL  { color: var(--status-success); }
+
+/* ── 26. Priority Index badge ── */
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(229, 193, 88, 0.10);
+  border: 1px solid var(--border-highlight);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+

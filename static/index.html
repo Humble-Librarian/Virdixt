@@ -220,7 +220,6 @@
       </div>
 
       <div class="trace-console" id="trace-console">
-        <template x-for="(log, idx) in traceLogs" :key="idx">
           <div class="trace-line">
             <span class="trace-ts" x-text="'[' + log.ts + ']'"></span>
             <span class="trace-stage" :class="log.stage" x-text="log.stage + ' ──▸'"></span>
@@ -232,8 +231,181 @@
       </div>
     </div>
 
+    <!-- ══════════════ PHASE 3: AUDIT RESULT DASHBOARD ══════════════ -->
+    <div class="result-section" id="result-section" x-show="result" x-cloak>
+
+      <!-- ── Verdict Banner ── -->
+      <div class="verdict-banner" :class="verdictGradeClass" id="verdict-banner">
+        <div class="verdict-left">
+          <span class="verdict-label">Institutional Risk Verdict</span>
+          <div class="verdict-grade" :class="verdictGradeClass" x-text="result?.verdict?.rating ?? '—'"></div>
+          <div class="verdict-interpretation" x-text="result?.verdict?.interpretation ?? ''"></div>
+          <!-- Override alert -->
+          <div class="verdict-override"
+               x-show="result?.override_reasons?.length"
+               x-text="'⚠ Escalated: ' + (result?.override_reasons ?? []).join(', ')">
+          </div>
+        </div>
+        <div class="verdict-right">
+          <div class="verdict-score-row">
+            <span class="verdict-score-num" x-text="distressScore"></span>
+            <span class="verdict-score-label">/ 100 Distress</span>
+          </div>
+          <div class="verdict-meta" x-text="'Score: ' + (result?.verdict?.score ?? '—')"></div>
+          <!-- Priority Index -->
+          <div class="priority-badge" x-show="priorityFormatted" x-cloak>
+            ⚡ <span x-text="priorityFormatted"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Policy Action Row ── -->
+      <div class="panel" id="policy-panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="dot"></span>ERP Policy Directives</div>
+        </div>
+        <div class="action-row">
+          <span class="action-label">Exposure Tier</span>
+          <span class="action-value" :class="actionGradeClass"
+                x-text="result?.verdict?.interpretation ?? '—'"></span>
+        </div>
+        <div class="action-row">
+          <span class="action-label">Policy Action</span>
+          <span class="action-value" :class="actionGradeClass"
+                x-text="result?.action_flag ?? '—'"></span>
+        </div>
+        <div class="rec-list" id="rec-list">
+          <template x-for="(rec, i) in (result?.action_recommendations ?? [])" :key="i">
+            <div class="rec-item">
+              <span class="rec-bullet" x-text="i + 1"></span>
+              <span x-text="rec"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ── Two-column Lane Grid ── -->
+      <div class="lane-grid">
+
+        <!-- Lane 1: Quantitative Forensic Metrics -->
+        <div class="panel" id="quant-panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="dot"></span>Quantitative Forensic Benchmarks</div>
+          </div>
+          <template x-if="result?.quantitative && Object.keys(result.quantitative).length > 0">
+            <table class="quant-table" id="quant-table">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Score</th>
+                  <th>Interpretation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Altman Z -->
+                <tr x-show="result?.quantitative?.altman_z">
+                  <td>
+                    Altman Z-Score
+                    <div class="quant-formula" x-text="result?.quantitative?.altman_z?.formula ?? ''"></div>
+                  </td>
+                  <td><span class="quant-score" x-text="fmtScore(result?.quantitative?.altman_z?.score)"></span></td>
+                  <td>
+                    <span class="status-chip"
+                          :class="chipClass(result?.quantitative?.altman_z?.status)"
+                          x-text="result?.quantitative?.altman_z?.status ?? '—'"></span>
+                  </td>
+                </tr>
+                <!-- Beneish M -->
+                <tr x-show="result?.quantitative?.beneish_m">
+                  <td>
+                    Beneish M-Score
+                    <div class="quant-formula"
+                         x-text="'Threshold: ' + (result?.quantitative?.beneish_m?.threshold ?? '−1.78')"></div>
+                  </td>
+                  <td><span class="quant-score" x-text="fmtScore(result?.quantitative?.beneish_m?.score)"></span></td>
+                  <td>
+                    <span class="status-chip"
+                          :class="chipClass(result?.quantitative?.beneish_m?.status)"
+                          x-text="result?.quantitative?.beneish_m?.status ?? '—'"></span>
+                  </td>
+                </tr>
+                <!-- Benford Law -->
+                <tr x-show="result?.quantitative?.benford_law != null">
+                  <td>Benford's Law</td>
+                  <td><span class="quant-score">—</span></td>
+                  <td>
+                    <span class="status-chip"
+                          :class="result?.quantitative?.benford_law?.anomaly_detected ? 'chip-danger' : 'chip-success'"
+                          x-text="result?.quantitative?.benford_law?.anomaly_detected ? 'Anomaly' : 'Normal'"></span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+          <template x-if="!result?.quantitative || Object.keys(result.quantitative).length === 0">
+            <div class="masking-empty">No financial data fields detected — forensic accounting lane did not run.</div>
+          </template>
+        </div>
+
+        <!-- Lane 2: NLP & Sentiment Vector -->
+        <div class="panel" id="nlp-panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="dot" style="background:var(--status-info);box-shadow:0 0 6px var(--status-info);"></span>NLP & Tone Classification</div>
+          </div>
+          <div class="sentiment-grid">
+            <div class="sentiment-row">
+              <span class="sentiment-key">Sentiment Tone</span>
+              <span class="sentiment-val verdict-grade" :class="toneClass"
+                    x-text="result?.nlp_sentiment?.tone ?? '—'"></span>
+            </div>
+            <div class="sentiment-row">
+              <span class="sentiment-key">Composite Distress Score</span>
+              <span class="sentiment-val" x-text="distressScore + ' / 100'"></span>
+            </div>
+            <div class="sentiment-row">
+              <span class="sentiment-key">Completeness Badge</span>
+              <span class="sentiment-val" x-text="result?.completeness ?? '—'"></span>
+            </div>
+          </div>
+          <!-- Key aspect triggers -->
+          <div class="trigger-chips" x-show="(result?.nlp_sentiment?.key_triggers ?? []).length > 0" id="trigger-chips">
+            <template x-for="t in (result?.nlp_sentiment?.key_triggers ?? [])" :key="t">
+              <span class="trigger-chip" x-text="t"></span>
+            </template>
+          </div>
+        </div>
+
+      </div><!-- end lane-grid -->
+
+      <!-- Lane 3: Rhetorical Masking Callouts (full width) -->
+      <div class="panel" id="masking-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="dot" style="background:var(--status-warning);box-shadow:0 0 6px var(--status-warning);"></span>
+            Rhetorical Masking & Discourse Analysis
+          </div>
+          <span style="font-size:11px;color:var(--text-muted);"
+                x-text="(result?.rhetorical_masking?.callouts ?? []).length + ' callout(s) detected'"></span>
+        </div>
+        <template x-if="(result?.rhetorical_masking?.callouts ?? []).length === 0">
+          <div class="masking-empty">✓ No rhetorical masking patterns detected in this document.</div>
+        </template>
+        <template x-for="(c, i) in (result?.rhetorical_masking?.callouts ?? [])" :key="i">
+          <div class="callout-item" :id="'callout-' + i">
+            <div class="callout-score">
+              ⚠ Masking Score: <span x-text="(c.masking_score * 100).toFixed(0) + '%'"></span>
+            </div>
+            <div class="callout-sentence" x-text="c.sentence"></div>
+            <div class="callout-explanation" x-text="c.explanation"></div>
+          </div>
+        </template>
+      </div>
+
+    </div><!-- end result-section -->
+
   </main>
 
   <script src="/app.js"></script>
 </body>
 </html>
+

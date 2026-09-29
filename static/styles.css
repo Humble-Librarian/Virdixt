@@ -1,0 +1,484 @@
+/* ============================================================
+   VIRDIXT — Institutional Forensic Audit Platform
+   Design Tokens & Component Styles
+   Source of truth: DESIGN.md
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── 1. CSS Variables: Obsidian Dark (default) ── */
+:root {
+  --bg-base:              #0B0C10;
+  --bg-surface:           #12141A;
+  --bg-surface-elevated:  #1A1D24;
+  --border-subtle:        rgba(255, 255, 255, 0.08);
+  --border-highlight:     rgba(229, 193, 88, 0.30);
+  --text-primary:         #F3F4F6;
+  --text-secondary:       #9CA3AF;
+  --text-muted:           #6B7280;
+  --accent-gold:          #E5C158;
+  --accent-gold-hover:    #F3D372;
+  --accent-gold-glow:     rgba(229, 193, 88, 0.12);
+  --accent-gold-glow-h:   rgba(229, 193, 88, 0.22);
+  --status-danger:        #EF4444;
+  --status-warning:       #F59E0B;
+  --status-success:       #10B981;
+  --status-info:          #60A5FA;
+  --font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:   'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   16px;
+  --transition:  0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── 2. Platinum Light Theme ── */
+[data-theme="light"] {
+  --bg-base:              #F8F9FA;
+  --bg-surface:           #FFFFFF;
+  --bg-surface-elevated:  #F3F4F6;
+  --border-subtle:        rgba(0, 0, 0, 0.08);
+  --border-highlight:     rgba(184, 134, 11, 0.40);
+  --text-primary:         #111827;
+  --text-secondary:       #4B5563;
+  --text-muted:           #9CA3AF;
+  --accent-gold:          #B8860B;
+  --accent-gold-hover:    #966D07;
+  --accent-gold-glow:     rgba(184, 134, 11, 0.08);
+  --accent-gold-glow-h:   rgba(184, 134, 11, 0.18);
+  --status-danger:        #DC2626;
+  --status-warning:       #D97706;
+  --status-success:       #059669;
+  --status-info:          #2563EB;
+}
+
+/* ── 3. Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 14px; scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* ── 4. Top Navigation Bar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 56px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-hover));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.topbar-logo svg { flex-shrink: 0; }
+
+.topbar-center {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.theme-toggle {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex; align-items: center; gap: 6px;
+  transition: border-color var(--transition), color var(--transition);
+}
+.theme-toggle:hover { border-color: var(--border-highlight); color: var(--accent-gold); }
+
+/* ── 5. Main Layout ── */
+.main-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 28px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── 6. Page Header ── */
+.page-header { padding-bottom: 4px; }
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.page-header p {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── 7. Panel Base ── */
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-title .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  box-shadow: 0 0 6px var(--accent-gold);
+}
+
+/* ── 8. Input Tabs ── */
+.input-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 13px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.tab-btn:hover { color: var(--text-secondary); background: var(--accent-gold-glow); }
+.tab-btn.active {
+  color: var(--accent-gold);
+  border-bottom-color: var(--accent-gold);
+  background: var(--accent-gold-glow);
+}
+
+/* ── 9. Tab Panels ── */
+.tab-content { display: none; padding: 22px; }
+.tab-content.active { display: block; }
+
+/* ── 10. Drag & Drop Zone ── */
+.dropzone {
+  border: 1.5px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  position: relative;
+}
+.dropzone:hover, .dropzone.drag-over {
+  border-color: var(--accent-gold);
+  background: var(--accent-gold-glow);
+}
+.dropzone-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+.dropzone-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.dropzone-label strong { color: var(--accent-gold); cursor: pointer; }
+.dropzone-label strong:hover { color: var(--accent-gold-hover); }
+.dropzone-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+.dropzone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+}
+.file-selected {
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.file-selected .remove-file {
+  cursor: pointer; color: var(--status-danger);
+  font-size: 14px; font-weight: 700; line-height: 1;
+  background: none; border: none;
+}
+
+/* ── 11. Text Area ── */
+.raw-textarea {
+  width: 100%;
+  min-height: 140px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.raw-textarea:focus { border-color: var(--border-highlight); }
+.raw-textarea::placeholder { color: var(--text-muted); }
+
+/* ── 12. Sample Selector ── */
+.sample-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sample-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+.sample-item:hover { border-color: var(--border-highlight); background: var(--accent-gold-glow); }
+.sample-item.selected { border-color: var(--accent-gold); background: var(--accent-gold-glow); }
+
+.sample-item-info { display: flex; flex-direction: column; gap: 2px; }
+.sample-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+.sample-item-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+.sample-item-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+.sample-item.selected .sample-item-badge {
+  background: var(--accent-gold-glow);
+  color: var(--accent-gold);
+  border-color: var(--border-highlight);
+}
+
+/* ── 13. Exposure Row ── */
+.exposure-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 22px;
+  border-top: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+.exposure-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.exposure-input {
+  flex: 1;
+  min-width: 140px;
+  max-width: 220px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.exposure-input:focus { border-color: var(--border-highlight); }
+.exposure-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── 14. Analyze Button ── */
+.btn-analyze {
+  margin: 0 22px 22px;
+  width: calc(100% - 44px);
+  padding: 13px 24px;
+  background: var(--accent-gold);
+  color: #0B0C10;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  box-shadow: 0 2px 16px rgba(229, 193, 88, 0.18);
+}
+.btn-analyze:hover:not(:disabled) {
+  background: var(--accent-gold-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(229, 193, 88, 0.3);
+}
+.btn-analyze:active:not(:disabled) { transform: translateY(0); }
+.btn-analyze:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Spinner inside button */
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: #0B0C10;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 15. Trace Console ── */
+.trace-panel {
+  display: none;
+}
+.trace-panel.visible { display: block; }
+
+.trace-console {
+  background: #080A0E;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  padding: 16px 22px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.8;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+[data-theme="light"] .trace-console { background: #F0F1F5; }
+
+.trace-line {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  animation: fade-in 0.2s ease;
+}
+@keyframes fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+.trace-ts { color: var(--text-muted); min-width: 64px; }
+.trace-stage {
+  min-width: 96px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.trace-stage.INGESTION  { color: var(--status-info); }
+.trace-stage.ENGINE     { color: var(--accent-gold); }
+.trace-stage.PARSER     { color: var(--status-info); }
+.trace-stage.SYNTHESIS  { color: var(--status-success); }
+.trace-stage.REQUEST    { color: var(--text-muted); }
+.trace-stage.ERROR      { color: var(--status-danger); }
+.trace-msg { color: var(--text-secondary); }
+
+.trace-cursor {
+  display: inline-block;
+  width: 8px; height: 14px;
+  background: var(--accent-gold);
+  border-radius: 1px;
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── 16. Error Banner ── */
+.error-banner {
+  display: none;
+  padding: 12px 18px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--status-danger);
+  gap: 8px;
+  align-items: center;
+}
+.error-banner.visible { display: flex; }
+
+/* ── 17. Responsive ── */
+@media (max-width: 640px) {
+  .main-layout { padding: 20px 14px 60px; gap: 18px; }
+  .topbar { padding: 0 16px; }
+  .topbar-center { display: none; }
+  .exposure-row { flex-direction: column; align-items: flex-start; }
+  .exposure-input { max-width: 100%; }
+}

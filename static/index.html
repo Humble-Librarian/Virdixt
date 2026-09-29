@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virdixt — Institutional Forensic Audit Intelligence</title>
+  <meta name="description" content="Virdixt: Local-first AI-powered forensic accounting and institutional risk auditing platform. Powered by FinBERT, Altman Z, Beneish M-Score, and Rhetorical Discourse Analysis." />
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="/styles.css" />
+
+  <!-- Alpine.js (CDN, ~15KB gzipped — no npm, no build) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+</head>
+<body x-data="virdixt" x-init="init()">
+
+  <!-- ══════════════ TOP NAVIGATION ══════════════ -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      <!-- Gold hex icon -->
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M11 1L20.5 6.5V15.5L11 21L1.5 15.5V6.5L11 1Z"
+              stroke="#E5C158" stroke-width="1.5" fill="none"/>
+        <path d="M11 5L17 8.5V15.5L11 19L5 15.5V8.5L11 5Z"
+              fill="rgba(229,193,88,0.12)" stroke="#E5C158" stroke-width="1"/>
+      </svg>
+      VIRDIXT
+    </div>
+
+    <span class="topbar-center">Forensic Audit Intelligence Platform · Local Engine</span>
+
+    <div class="topbar-right">
+      <button class="theme-toggle" @click="toggleTheme()" :aria-label="themeLabel" id="theme-toggle-btn">
+        <span x-text="themeIcon"></span>
+        <span x-text="themeLabel"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════════ MAIN CONTENT ══════════════ -->
+  <main class="main-layout">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <h1>Document Forensic Analysis</h1>
+      <p>Upload a financial report, paste raw text, or select a sample — then run the full 4-lane forensic audit engine.</p>
+    </div>
+
+    <!-- Error banner -->
+    <div class="error-banner" :class="{ visible: errorMsg }" role="alert" id="error-banner">
+      <span>⚠</span>
+      <span x-text="errorMsg"></span>
+    </div>
+
+    <!-- ── Ingestion Panel ── -->
+    <div class="panel" id="ingestion-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="dot"></span>
+          Input Source
+        </div>
+      </div>
+
+      <!-- Source Tabs -->
+      <div class="input-tabs" role="tablist">
+        <button class="tab-btn"
+                :class="{ active: activeTab === 'file' }"
+                @click="activeTab = 'file'"
+                role="tab"
+                id="tab-file"
+                aria-controls="tabpanel-file">
+          📄 Upload File
+        </button>
+        <button class="tab-btn"
+                :class="{ active: activeTab === 'text' }"
+                @click="activeTab = 'text'"
+                role="tab"
+                id="tab-text"
+                aria-controls="tabpanel-text">
+          ✏️ Raw Text
+        </button>
+        <button class="tab-btn"
+                :class="{ active: activeTab === 'sample' }"
+                @click="activeTab = 'sample'"
+                role="tab"
+                id="tab-sample"
+                aria-controls="tabpanel-sample">
+          🗂 Sample Reports
+        </button>
+      </div>
+
+      <!-- Tab: File Upload -->
+      <div class="tab-content"
+           :class="{ active: activeTab === 'file' }"
+           role="tabpanel"
+           id="tabpanel-file">
+
+        <div class="dropzone"
+             :class="{ 'drag-over': dragOver }"
+             @dragover="onDragOver($event)"
+             @dragleave="onDragLeave()"
+             @drop="onDrop($event)"
+             id="dropzone">
+          <div class="dropzone-icon">📁</div>
+          <div class="dropzone-label">
+            Drag &amp; drop your file here, or
+            <strong onclick="document.getElementById('file-input').click()">browse</strong>
+          </div>
+          <div class="dropzone-hint">Supports .txt · .pdf · .csv · .docx — Max 100 MB</div>
+          <input type="file"
+                 id="file-input"
+                 accept=".txt,.pdf,.csv,.docx,.doc,.xlsx,.xls"
+                 @change="onFileChange($event)"
+                 style="position:absolute;inset:0;opacity:0;cursor:pointer;"
+                 aria-label="Upload financial document" />
+        </div>
+
+        <!-- File validation error -->
+        <div x-show="fileError"
+             style="margin-top:10px;font-size:12px;color:var(--status-danger);"
+             x-text="fileError">
+        </div>
+
+        <!-- Selected file chip -->
+        <div class="file-selected" x-show="selectedFile" x-cloak>
+          <span>
+            <strong x-text="selectedFile?.name"></strong>
+            &nbsp;—&nbsp;
+            <span x-text="fileSizeLabel" style="color:var(--text-muted)"></span>
+          </span>
+          <button class="remove-file" @click="removeFile()" aria-label="Remove selected file">✕</button>
+        </div>
+      </div>
+
+      <!-- Tab: Raw Text -->
+      <div class="tab-content"
+           :class="{ active: activeTab === 'text' }"
+           role="tabpanel"
+           id="tabpanel-text">
+        <textarea class="raw-textarea"
+                  id="raw-text-input"
+                  placeholder="Paste or type a financial report, earnings commentary, or audit note here…"
+                  x-model="rawText"
+                  spellcheck="false"></textarea>
+        <div style="margin-top:8px;font-size:11px;color:var(--text-muted);"
+             x-text="rawText.trim().length + ' characters'"></div>
+      </div>
+
+      <!-- Tab: Sample Reports -->
+      <div class="tab-content"
+           :class="{ active: activeTab === 'sample' }"
+           role="tabpanel"
+           id="tabpanel-sample">
+        <div class="sample-selector" id="sample-list">
+          <template x-if="samples.length === 0">
+            <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:20px 0;">
+              Loading sample reports…
+            </div>
+          </template>
+          <template x-for="s in samples" :key="s.filename">
+            <div class="sample-item"
+                 :class="{ selected: selectedSample?.filename === s.filename }"
+                 @click="selectSample(s)"
+                 role="button"
+                 tabindex="0"
+                 @keydown.enter="selectSample(s)"
+                 :id="'sample-' + s.filename.replace('.', '-')">
+              <div class="sample-item-info">
+                <span class="sample-item-name" x-text="s.filename"></span>
+                <span class="sample-item-meta" x-text="s.size"></span>
+              </div>
+              <span class="sample-item-badge"
+                    x-text="selectedSample?.filename === s.filename ? 'Selected' : 'Load'"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Exposure Row -->
+      <div class="exposure-row">
+        <label class="exposure-label" for="exposure-input">$ Exposure</label>
+        <input class="exposure-input"
+               type="number"
+               id="exposure-input"
+               placeholder="e.g. 5000000"
+               min="0"
+               step="100000"
+               x-model.number="exposure"
+               aria-label="Exposure value in dollars" />
+        <span class="exposure-hint">
+          Enter the dollar exposure amount for risk-priority weighting.
+          Leave 0 if not applicable.
+        </span>
+      </div>
+
+      <!-- Analyze Button -->
+      <button class="btn-analyze"
+              @click="analyze()"
+              :disabled="!canAnalyze"
+              id="btn-analyze">
+        <template x-if="analyzing">
+          <span class="spinner"></span>
+        </template>
+        <template x-if="!analyzing">
+          <span>⚡</span>
+        </template>
+        <span x-text="analyzing ? 'Running Forensic Engine…' : 'Run Forensic Analysis'"></span>
+      </button>
+    </div>
+
+    <!-- ── Live Processing Trace Console ── -->
+    <div class="panel trace-panel" :class="{ visible: showTrace }" id="trace-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="dot" style="background:var(--status-info);box-shadow:0 0 6px var(--status-info);"></span>
+          Forensic Engine Execution Trace
+        </div>
+        <span style="font-size:11px;color:var(--text-muted);"
+              x-text="analyzing ? 'Running…' : traceLogs.length + ' steps completed'"></span>
+      </div>
+
+      <div class="trace-console" id="trace-console">
+        <template x-for="(log, idx) in traceLogs" :key="idx">
+          <div class="trace-line">
+            <span class="trace-ts" x-text="'[' + log.ts + ']'"></span>
+            <span class="trace-stage" :class="log.stage" x-text="log.stage + ' ──▸'"></span>
+            <span class="trace-msg" x-text="log.message"></span>
+          </div>
+        </template>
+        <!-- Blinking cursor while running -->
+        <span class="trace-cursor" x-show="analyzing"></span>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

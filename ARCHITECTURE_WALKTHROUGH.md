@@ -126,20 +126,59 @@ Execute fast, calibrated neural classification on the processed text in under **
 
 ---
 
-### 🛡️ Stage 5: ERP Policy Advisor & Commercial Actions
+### 🛡️ Stage 5: ERP Policy Advisor & Hierarchical Deterministic Overrides
 **Files involved:** [`infer.py`](file:///d:/Virdixt/infer.py)
 
 #### 🎯 Goal
-Translate the AI analysis into concrete business actions for ERP and procurement systems (SAP, Oracle, NetSuite).
+Translate the neural analysis and multi-lane forensic indicators into concrete, enforceable business actions for ERP and procurement systems (SAP, Oracle, NetSuite).
 
 #### 💡 How It Works
-Virdixt uses an **Asymmetric Risk Rule**: In corporate finance, failing to catch a bankruptcy is 10x worse than being overly cautious.
-* If **Negative Probability $> 35\%$** or **Distress Index $> 65.0$**, Virdixt flags a high-risk policy violation.
-* Generates concrete actionable instructions:
-  - 🚨 `FREEZE_PURCHASE_ORDERS`: Stop shipping goods on credit immediately.
-  - 💵 `REQUIRE_UPFRONT_CASH`: Shift customer to 100% upfront wire transfer.
-  - 📑 `AUDIT_DEBT_COVENANTS`: Demand audited bank compliance certificates.
-  - ✅ `PROCEED_STANDARD_TERMS`: Safe for standard Net-30/Net-60 commercial credit.
+Virdixt uses a **Hierarchical Baseline + Circuit Breaker Veto** architecture:
+
+```mermaid
+flowchart TD
+    BERT["FinBERT Neural Distress Score & Negative Probabilities"] --> BASE{"Baseline RiskGrade\n(CRITICAL / WARNING / MONITOR / MINIMAL)"}
+    
+    BASE --> VETO{"Deterministic Veto Layer (apply_overrides)"}
+    FORENSIC["Altman Z-Score in DISTRESS ZONE"] -->|Hard Veto| VETO
+    HEDGE["Linguistic Evasion = EXTREME_EVASION"] -->|Hard Veto| VETO
+    
+    VETO -->|Forces CRITICAL if Distress Zone| FINAL["Final RiskGrade"]
+    VETO -->|Forces at least WARNING if Evasion| FINAL
+    VETO -->|Otherwise keeps Baseline| FINAL
+    
+    FINAL --> MAP["Strict Policy Mapping (POLICY_TABLE)"]
+    MAP --> TIER["ERP Exposure Tier (TIER_1_SAFE to TIER_4_BLOCKED)"]
+    MAP --> ACT["Policy Action (FREEZE_PURCHASE_ORDERS / FLAG / PROCEED)"]
+    MAP --> RECS["Actionable Operational Directives"]
+    
+    DOC["Input Document & Signals"] --> COMP["Completeness Engine (evaluate_completeness)"]
+    COMP --> BADGE["Badge: FULL / PARTIAL / THIN"]
+
+    style BERT fill:#11111b,stroke:#89dceb,stroke-width:2px,color:#cdd6f4
+    style VETO fill:#313244,stroke:#f38ba8,stroke-width:2px,color:#cdd6f4
+    style FINAL fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4
+    style MAP fill:#181825,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4
+    style COMP fill:#181825,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4
+```
+
+1. **Baseline Assessment:**
+   - **CRITICAL:** `score_val > 75` or `neg_prob > 0.60`
+   - **WARNING:** `neg_prob > 0.35` or `score_val > 40`
+   - **MONITOR:** `score_val > 20`
+   - **MINIMAL:** Otherwise
+2. **Deterministic Veto Overrides (`apply_overrides`):**
+   - **Forensic Accounting Veto:** If Altman Z-Score is in the `"DISTRESS ZONE"`, it unconditionally forces the final grade to **CRITICAL** (adding `"Altman Z in distress zone"` to override reasons).
+   - **Hedging / Deception Veto:** If hedging analysis detects `"EXTREME_EVASION"`, it forces the grade up to at least **WARNING** (adding `"Extreme hedging language"`).
+3. **Strict ERP Policy Mapping (`POLICY_TABLE`):**
+   - 🚨 `CRITICAL` $\rightarrow$ `TIER_4_BLOCKED` $\rightarrow$ `FREEZE_PURCHASE_ORDERS` (Immediate freeze on uncommitted POs; require 100% upfront wire transfer or LC).
+   - ⚠️ `WARNING` $\rightarrow$ `TIER_3_WARNING` $\rightarrow$ `FLAG_FOR_REVIEW` (Cap single transaction exposure to $25,000; verify 90-day cash burn).
+   - 🔍 `MONITOR` $\rightarrow$ `TIER_2_MONITOR` $\rightarrow$ `PROCEED_NORMAL` (Standard monitoring on quarterly 10-Q).
+   - ✅ `MINIMAL` $\rightarrow$ `TIER_1_SAFE` $\rightarrow$ `PROCEED_NORMAL` (Healthy balance sheet; approved for standard commercial credit terms).
+4. **Data Completeness & Confidence Engine (`evaluate_completeness`):**
+   - Cross-checks document length, missing financial parameters, and aspect coverage to assign institutional confidence badges (`FULL`, `PARTIAL`, `THIN`).
+5. **Dollar Priority Index:**
+   - Evaluates risk-adjusted financial exposure: $\text{Priority} = (\text{Score} / 100) \times \text{Exposure Value}$ for instant portfolio triage.
 
 ---
 
@@ -182,7 +221,10 @@ flowchart LR
 | [`nlp/linguistic_hedging.py`](file:///d:/Virdixt/nlp/linguistic_hedging.py) | Deception detection: Epistemic uncertainty index, passive voice evasion, and Gunning-Fog readability grade. |
 | [`nlp/discourse_parser.py`](file:///d:/Virdixt/nlp/discourse_parser.py) | Rhetorical Structure Theory (RST) parsing separating primary facts (nuclei) from excuses (satellites). |
 | [`nlp/forensic_accounting.py`](file:///d:/Virdixt/nlp/forensic_accounting.py) | Quantitative forensic math: Altman Z-Score, Beneish M-Score, and Piotroski F-Score. |
-| [`infer.py`](file:///d:/Virdixt/infer.py) | Command-line runtime integrating all modules, executing ONNX inference, and producing ERP audit tables. |
+| [`infer.py`](file:///d:/Virdixt/infer.py) | Command-line runtime integrating all modules, ONNX inference, deterministic overrides, and ERP audit reports. |
+| [`tests/test_advise_integration.py`](file:///d:/Virdixt/tests/test_advise_integration.py) | End-to-end integration tests validating financial distress escalations and policy tables. |
+| [`tests/test_completeness.py`](file:///d:/Virdixt/tests/test_completeness.py) | Unit tests verifying signal availability checks, pruning neutralities, and serialization. |
+| [`tests/test_overrides.py`](file:///d:/Virdixt/tests/test_overrides.py) | Deterministic test suite verifying forensic accounting and hedging override rules. |
 | [`test_ocr_pipeline.py`](file:///d:/Virdixt/test_ocr_pipeline.py) | Verification test suite for degraded scan restoration, ONNX OCR, and PDF fallback. |
 | [`requirements.txt`](file:///d:/Virdixt/requirements.txt) | Complete local dependencies (Torch, Transformers, ONNX Runtime, OpenCV, RapidOCR, PyMuPDF). |
 
@@ -194,12 +236,18 @@ flowchart LR
 # 1. Audit any document (PDF, Scanned Image, DOCX, Excel, CSV, TXT)
 python infer.py --file "sample_financials.pdf"
 
-# 2. Audit raw corporate text directly
+# 2. Audit with financial exposure tracking
+python infer.py --file "sample_financials.pdf" --exposure 500000
+
+# 3. Audit raw corporate text directly
 python infer.py --text "Although revenue rose by 14%, cash flow turned deeply negative."
 
-# 3. Run OCR & Image Restoration Verification Test Suite
+# 4. Run the full pytest verification test suite
+pytest -v
+
+# 5. Run OCR & Image Restoration Verification Test Suite
 python test_ocr_pipeline.py
 
-# 4. Re-evaluate Model Accuracy & Recall
+# 6. Re-evaluate Model Accuracy & Recall
 python eval.py
 ```

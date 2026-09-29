@@ -27,11 +27,14 @@
 * **Rhetorical Structure Theory (RST) Concessive Parsing:** Identifies rhetorical masking by separating superficial *Satellites* (buffer clauses) from core *Nuclei* (dominant economic realities).
 * **Deterministic Quantitative Forensic Accounting:** Microsecond calculations of institutional solvency benchmarks (**Altman Z-Score**, **Beneish M-Score**, **Piotroski F-Score**) with zero external dependencies.
 * **Deterministic Chart-to-Table Vision Subsystem:** Detects financial graphs, extracts underlying tables, and computes exact percentage deltas to inject concessive commentary without visual hallucination.
+* **Hierarchical Rule-Based Escalation & Circuit Breakers (`apply_overrides`):** Combines neural FinBERT predictions with deterministic short-circuit vetoes (e.g., Altman Z in *Distress Zone* forces unconditional escalation to `CRITICAL` / `FREEZE_PURCHASE_ORDERS`; Extreme Hedging language forces `WARNING`).
+* **Document Completeness Engine (`evaluate_completeness`):** Audits signal availability across word counts, missing financial statements, and aspect coverage to assign institutional confidence badges (`FULL`, `PARTIAL`, `THIN`).
+* **Financial Exposure & Priority Ranking:** Computes risk-adjusted dollar exposure ($\text{Priority} = \frac{\text{Distress Score}}{100} \times \text{Exposure Value}$) for enterprise triage.
 * **Laya Open-Weights System-1 Primitives:**
   * **`Choice`:** Calibrated discrete sentiment classification (`NEGATIVE`, `NEUTRAL`, `POSITIVE`).
   * **`Score`:** Continuous Financial Distress Index $[0.0, 100.0]$ ($0 = \text{Peak Solvency}, 100 = \text{Imminent Distress}$).
   * **`Noul`:** Calibrated probability propositions ($P(\text{Liquidity Distress})$, $P(\text{Covenant Breach})$, $P(\text{Growth Momentum})$).
-* **Automated ERP Policy Engine:** Evaluates asymmetric risk thresholds ($>35\%$ negative probability triggers warnings) and generates enforceable policy action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`).
+* **Automated ERP Policy Engine (`POLICY_TABLE`):** Strict deterministic mapping from risk grades to exposure tiers (`TIER_1_SAFE` to `TIER_4_BLOCKED`), policy action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`), and actionable operational directives.
 * **100% Air-Gapped / Zero-Cloud Leakage:** Operates entirely offline on standard CPU/GPU using native ONNX runtimes. Zero data ever leaves the local machine.
 
 
@@ -250,6 +253,33 @@ python eval.py
 
 ---
 
+## 🧪 Comprehensive Verification & Test Suite
+
+Run the full end-to-end regression and unit test suite across overrides, completeness badges, integration flows, and OCR pipeline:
+
+```bash
+pytest -v
+```
+
+```text
+============================= test session starts =============================
+test_ocr_pipeline.py::test_ocr_pipeline PASSED                           [  8%]
+tests/test_advise_integration.py::test_distress_dict_escalates_minimal_to_critical PASSED [ 16%]
+tests/test_advise_integration.py::test_safe_dict_stays_minimal PASSED    [ 25%]
+tests/test_advise_integration.py::test_no_dict_stays_minimal PASSED      [ 33%]
+tests/test_advise_integration.py::test_evasive_text_escalates_minimal_to_warning PASSED [ 41%]
+tests/test_advise_integration.py::test_policy_table_consistency_across_all_grades PASSED [ 50%]
+tests/test_completeness.py::test_evaluate_completeness_speed_under_500ms PASSED [ 58%]
+tests/test_completeness.py::test_thin_document_returns_unknown_state PASSED [ 66%]
+tests/test_completeness.py::test_full_document_returns_signals_count PASSED [ 75%]
+tests/test_completeness.py::test_pruning_note_does_not_penalize_label PASSED [ 83%]
+tests/test_completeness.py::test_advisor_result_to_dict_serializable PASSED [ 91%]
+tests/test_overrides.py::test_overrides PASSED                           [100%]
+============================= 12 passed in 8.83s ==============================
+```
+
+---
+
 ## 📁 Repository Structure
 
 ```text
@@ -269,14 +299,30 @@ Virdixt/
 ├── 📄 eval.py                        # Full metrics & confusion matrix evaluator
 ├── 📄 export_onnx.py                 # ONNX & INT8 quantization graph exporter
 │
+├── ── COMPUTATIONAL NLP & REASONING ───
+├── 📂 nlp/
+│   ├── 📄 absa_engine.py             # Aspect-Based Sentiment Analysis (5 operational aspects)
+│   ├── 📄 linguistic_hedging.py      # Evasion detector, Epistemic score & Gunning-Fog index
+│   ├── 📄 discourse_parser.py        # Rhetorical Structure Theory (RST) concessive parser
+│   └── 📄 forensic_accounting.py     # Altman Z, Beneish M & Piotroski F calculations
+│
 ├── ── INFERENCE & VISION SUBSYSTEM ─────
-├── 📄 document_parser.py             # Universal PDF, DOCX, & TXT ingestor
-├── 📄 infer.py                       # Laya System-1 decision runtime (CLI, Batch, REPL)
+├── 📄 document_parser.py             # Universal PDF, DOCX, CSV, Excel & TXT ingestor
+├── 📄 infer.py                       # Laya System-1 decision runtime & Policy Engine
 ├── 📂 vision/
 │   ├── 📄 chart_detector.py          # Florence-2 chart classifier
 │   ├── 📄 chart_extractor.py         # Table extractor (Fast Heuristic & Google DePlot)
 │   ├── 📄 delta_calculator.py        # Deterministic delta math & concessive synthesizer
+│   ├── 📄 image_enhancer.py          # OpenCV restoration (CLAHE, deskew, bilateral filter)
+│   ├── 📄 ocr_engine.py              # RapidOCR ONNX layout-sorted engine
 │   └── 📄 pipeline.py                # Visual document orchestrator
+│
+├── ── TEST SUITE & BENCHMARKS ──────────
+├── 📂 tests/
+│   ├── 📄 test_advise_integration.py # End-to-end integration and policy table tests
+│   ├── 📄 test_completeness.py       # Data availability & completeness badge tests
+│   └── 📄 test_overrides.py          # Deterministic circuit-breaker override tests
+├── 📄 test_ocr_pipeline.py           # OCR & image enhancer validation suite
 │
 ├── ── C++ HIGH-THROUGHPUT RUNTIME ──────
 ├── 📂 cpp/
@@ -291,7 +337,7 @@ Virdixt/
 │
 └── ── DATASETS & SAMPLES ───────────────
     ├── 📂 data/                      # train.jsonl (5,355 rows) & val.jsonl (945 rows)
-    └── 📂 data/sample_reports/       # Test sample reports (.pdf, .docx, .txt)
+    └── 📂 data/sample_reports/       # Test sample reports (.pdf, .docx, .txt, .csv, .xlsx)
 ```
 
 ---

@@ -5,7 +5,7 @@ import time
 import argparse
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, Tuple
 
 # Enable UTF-8 console output for Windows terminals
 if sys.platform == "win32":
@@ -59,10 +59,106 @@ from nlp import (
     DiscourseAnalysisResult,
     ForensicAccountingEngine,
     ForensicScoreResult,
-    FusionRuleEngine,
-    FusionEvaluation,
-    LaneScores,
 )
+
+POLICY_TABLE = {
+    RiskGrade.CRITICAL: (
+        ExposureTier.TIER_4_BLOCKED,
+        PolicyActionFlag.FREEZE_PURCHASE_ORDERS,
+        [
+            "IMMEDIATE: Freeze uncommitted purchase orders and discretionary capex.",
+            "CREDIT: Require 100% upfront cash or irrevocable letters of credit.",
+            "AUDIT: Request immediate debt covenant compliance certificate."
+        ]
+    ),
+    RiskGrade.WARNING: (
+        ExposureTier.TIER_3_WARNING,
+        PolicyActionFlag.FLAG_FOR_REVIEW,
+        [
+            "Review counterparty liquidity buffer and 90-day cash burn rate.",
+            "Request updated debt covenant compliance certificates from lenders.",
+            "Cap maximum single transaction exposure to $25,000."
+        ]
+    ),
+    RiskGrade.MONITOR: (
+        ExposureTier.TIER_2_MONITOR,
+        PolicyActionFlag.PROCEED_NORMAL,
+        [
+            "Maintain standard monitoring on upcoming quarterly 10-Q filing.",
+            "Record counterparty risk review note in CRM."
+        ]
+    ),
+    RiskGrade.MINIMAL: (
+        ExposureTier.TIER_1_SAFE,
+        PolicyActionFlag.PROCEED_NORMAL,
+        [
+            "Counterparty balance sheet healthy; proceed with standard commercial credit terms.",
+            "Approved for preferred volume discount and standard Net-30/Net-60 terms."
+        ]
+    )
+}
+
+def apply_overrides(base_grade: RiskGrade, forensic_res, hedging_res):
+    grade_order = {RiskGrade.MINIMAL: 0, RiskGrade.MONITOR: 1, RiskGrade.WARNING: 2, RiskGrade.CRITICAL: 3}
+    final_grade = base_grade
+    reasons = []
+
+    if forensic_res and getattr(forensic_res, 'calculated', False):
+        if forensic_res.altman_zone.startswith("DISTRESS ZONE"):
+            if grade_order[RiskGrade.CRITICAL] > grade_order[final_grade]:
+                final_grade = RiskGrade.CRITICAL
+            reasons.append("Altman Z in distress zone")
+            
+    if hedging_res and getattr(hedging_res, 'hedging_level', '') == "EXTREME_EVASION":
+        if grade_order[RiskGrade.WARNING] > grade_order[final_grade]:
+            final_grade = RiskGrade.WARNING
+        reasons.append("Extreme hedging language")
+
+    return final_grade, reasons
+
+
+def evaluate_completeness(document: str, pruned_text: str, absa_results, forensic_res) -> Tuple[str, List[str]]:
+    """
+    Evaluates signal availability and assigns a FULL, PARTIAL, or THIN badge.
+    
+    Note: Pruning notes (e.g., 'Document was reduced...') are intentionally 
+    excluded from the negative note count and do not penalize the final label.
+    """
+    notes = []
+    word_count = len(document.split())
+    pruned_count = len(pruned_text.split())
+
+    if word_count > pruned_count:
+        notes.append(f"Document was reduced from {word_count} to {pruned_count} words by keyword pruning")
+
+    if word_count < 50:
+        notes.append("Very short input")
+    elif word_count > 300:
+        notes.append("Long document: FinBERT only sees the first 256 tokens of pruned text")
+
+    if not forensic_res or not getattr(forensic_res, "calculated", False):
+        notes.append("No financial data: forensic lane did not run")
+    else:
+        if not getattr(forensic_res, "altman_calculated", True):
+            notes.append("Altman Z-Score calculation invalid (missing or extreme denominator)")
+        if not getattr(forensic_res, "beneish_calculated", True):
+            notes.append("Beneish M-Score calculation invalid (missing or extreme denominator)")
+        if not getattr(forensic_res, "piotroski_calculated", True):
+            notes.append("Piotroski F-Score calculation invalid (insufficient fields)")
+
+    detected_aspects = sum(1 for a in (absa_results or []) if getattr(a, "detected", False))
+    if detected_aspects < 2:
+        notes.append("Few aspects covered")
+
+    issue_notes = [n for n in notes if not n.startswith("Document was reduced")]
+    if len(issue_notes) >= 3 or word_count < 50:
+        label = "THIN"
+    elif len(issue_notes) > 0:
+        label = "PARTIAL"
+    else:
+        label = "FULL"
+
+    return label, notes
 
 
 @dataclass
@@ -75,14 +171,31 @@ class AdvisorResult:
     distress_score: float
     noul: NoulResult
     calibrated_probs: Dict[str, float]
+    base_grade: RiskGrade
+    override_reasons: List[str]
     absa_results: List[AspectResult] = field(default_factory=list)
     hedging_result: Optional[HedgingAnalysisResult] = None
     discourse_result: Optional[DiscourseAnalysisResult] = None
     forensic_scores: Optional[ForensicScoreResult] = None
-    fusion_eval: Optional[FusionEvaluation] = None
+
+    completeness: str = "UNKNOWN"
+    completeness_notes: List[str] = field(default_factory=list)
+
     inference_time_ms: float = 0.0
     priority_index: float = 0.0
 
+
+    def to_dict(self):
+        import json
+        from dataclasses import asdict
+        class EnumEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, Enum):
+                    return obj.value
+                return super().default(obj)
+        # Serialize with standard asdict, then push through json to flatten enums
+        data = asdict(self)
+        return json.loads(json.dumps(data, cls=EnumEncoder))
 
 
 
@@ -224,7 +337,6 @@ class FinancialAdvisor:
         self.hedging_detector = LinguisticHedgingDetector()
         self.discourse_parser = RhetoricalDiscourseParser()
         self.forensic_engine = ForensicAccountingEngine()
-        self.fusion_engine = FusionRuleEngine()
 
     def advise(self, document: str, financial_dict: Optional[Dict[str, float]] = None, exposure_value: float = 0.0, show_trace: bool = False) -> AdvisorResult:
         if show_trace: console.print("\n[dim][1/6] Pruning document for anchor tokens...[/dim]")
@@ -256,75 +368,42 @@ class FinancialAdvisor:
         if show_trace: console.print("[dim][6/6] Computing Forensic Accounting metrics...[/dim]")
         forensic_res = self.forensic_engine.compute(financial_dict or {})
 
-        # Evaluate 5-Lane Composite Fusion & Guardrail Rules
-        fusion_eval = self.fusion_engine.evaluate_lanes(
-            sentiment_probs=probs,
-            sentiment_score=score_val,
-            absa_results=absa_results,
-            forensic_scores=forensic_res,
-            discourse_res=discourse_res,
-            hedging_res=hedging_res,
-        )
+        neg_prob = probs["negative"]
 
-        composite_score = fusion_eval.composite_distress_score
-
-        # Determine Final Institutional Verdict from 5-Lane Composite Score & Overrides
-        if composite_score >= 70.0:
-            risk_grade = RiskGrade.CRITICAL
-            exposure_tier = ExposureTier.TIER_4_BLOCKED
-            action_flag = PolicyActionFlag.FREEZE_PURCHASE_ORDERS
-            recs = [
-                "IMMEDIATE: Freeze uncommitted purchase orders and discretionary capex.",
-                "CREDIT: Require 100% upfront cash or irrevocable letters of credit.",
-                "AUDIT: Request immediate debt covenant compliance certificate."
-            ]
-        elif composite_score >= 40.0:
-            risk_grade = RiskGrade.WARNING
-            exposure_tier = ExposureTier.TIER_3_WARNING
-            action_flag = PolicyActionFlag.FLAG_FOR_REVIEW
-            recs = [
-                "Review counterparty liquidity buffer and 90-day cash burn rate.",
-                "Request updated debt covenant compliance certificates from lenders.",
-                "Cap maximum single transaction exposure to $25,000."
-            ]
-        elif composite_score >= 20.0:
-            risk_grade = RiskGrade.MONITOR
-            exposure_tier = ExposureTier.TIER_2_MONITOR
-            action_flag = PolicyActionFlag.PROCEED_NORMAL
-            recs = [
-                "Maintain standard monitoring on upcoming quarterly 10-Q filing.",
-                "Record counterparty risk review note in CRM."
-            ]
+        if score_val > 75 or neg_prob > 0.60:
+            base_grade = RiskGrade.CRITICAL
+        elif neg_prob > 0.35 or score_val > 40:
+            base_grade = RiskGrade.WARNING
+        elif score_val > 20:
+            base_grade = RiskGrade.MONITOR
         else:
-            risk_grade = RiskGrade.MINIMAL
-            exposure_tier = ExposureTier.TIER_1_SAFE
-            action_flag = PolicyActionFlag.PROCEED_NORMAL
-            recs = [
-                "Counterparty balance sheet healthy; proceed with standard commercial credit terms.",
-                "Approved for preferred volume discount and standard Net-30/Net-60 terms."
-            ]
+            base_grade = RiskGrade.MINIMAL
+            
+        final_grade, override_reasons = apply_overrides(base_grade, forensic_res, hedging_res)
+        exposure_tier, action_flag, recs = POLICY_TABLE[final_grade]
 
-        # Append Lane-Specific Governance Directives if triggered
-        for note in fusion_eval.governance_notes:
-            recs.append(f"GOVERNANCE DIRECTIVE: {note}")
+        comp, comp_notes = evaluate_completeness(document, pruned_text, absa_results, forensic_res)
 
         total_time_ms = (t_prune + t_sys1) * 1000.0
         priority_index = (score_val / 100.0) * exposure_value
 
         return AdvisorResult(
-            risk_grade=risk_grade,
+            risk_grade=final_grade,
             exposure_tier=exposure_tier,
             action_flag=action_flag,
             action_recommendations=recs,
             sentiment_choice=choice_val,
-            distress_score=composite_score,
+            distress_score=score_val,
             noul=noul_val,
             calibrated_probs=probs,
+            base_grade=base_grade,
+            override_reasons=override_reasons,
             absa_results=absa_results,
             hedging_result=hedging_res,
             discourse_result=discourse_res,
             forensic_scores=forensic_res,
-            fusion_eval=fusion_eval,
+            completeness=comp,
+            completeness_notes=comp_notes,
             inference_time_ms=total_time_ms,
             priority_index=priority_index
         )
@@ -347,11 +426,20 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
     table.add_row("Sentiment Choice", f"[{'red' if res.sentiment_choice=='NEGATIVE' else 'green' if res.sentiment_choice=='POSITIVE' else 'yellow'}]{res.sentiment_choice}[/]")
     table.add_row("Composite Distress Score", f"[bold {grade_color}]{res.distress_score:.1f}[/] / 100.0 (5-Lane Fused Index)")
     table.add_row("Calibrated Probabilities", f"Neg: {res.calibrated_probs['negative']*100:.1f}% | Neu: {res.calibrated_probs['neutral']*100:.1f}% | Pos: {res.calibrated_probs['positive']*100:.1f}%")
-    table.add_row("Institutional Risk Grade", f"[{grade_color}]{res.risk_grade.value}[/{grade_color}]")
-    table.add_row("ERP Exposure Tier", f"[{grade_color}]{res.exposure_tier.value}[/{grade_color}]")
+    table.add_row("Risk Grade", f"[{grade_color}]{res.risk_grade.value}[/{grade_color}]")
+    if res.override_reasons:
+        table.add_row("Overrides", f"[bold red]Escalated from {res.base_grade.value} to {res.risk_grade.value}: {', '.join(res.override_reasons)}[/]")
+    table.add_row("Exposure Tier", f"[{grade_color}]{res.exposure_tier.value}[/{grade_color}]")
     table.add_row("ERP Policy Action", f"[{grade_color}]{res.action_flag.value}[/{grade_color}]")
     if res.priority_index > 0:
-        table.add_row("Priority (Risk × Exposure)", f"[bold red]${res.priority_index:,.2f}[/bold red]")
+        table.add_row("Priority (Risk x Exposure)", f"[bold red]${res.priority_index:,.2f}[/bold red]")
+
+    if res.completeness:
+        c_style = "bold red" if res.completeness == "THIN" else "bold yellow" if res.completeness == "PARTIAL" else "bold green"
+        table.add_row("Completeness Badge", f"[{c_style}]{res.completeness}[/{c_style}]")
+        if res.completeness_notes:
+            notes_str = "\n".join([f"  - {n}" for n in res.completeness_notes])
+            table.add_row("Completeness Notes", f"[dim]{notes_str}[/dim]")
     table.add_row("Inference Latency", f"[bold green]{res.inference_time_ms:.2f} ms[/]")
 
     noul_str = (
@@ -365,37 +453,7 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
     console.print()
     console.print(table)
 
-    # 2. 5-Lane Composite Fusion & Governance Matrix Table
-    if res.fusion_eval:
-        f_eval = res.fusion_eval
-        fusion_table = Table(title="🎛️ 5-Lane Multi-Factor Risk Fusion & Governance Matrix", style="cyan")
-        fusion_table.add_column("Analytical Lane", style="bold cyan", width=26)
-        fusion_table.add_column("Lane Distress", style="white", width=16)
-        fusion_table.add_column("Active Weight", style="white", width=14)
-        fusion_table.add_column("Weighted Contribution", style="white")
 
-        lanes = [
-            ("1. Sentiment & NOUL", f_eval.lane_scores.sentiment_distress, f_eval.active_weights.get("sentiment", 0)),
-            ("2. Aspect-Based ABSA", f_eval.lane_scores.aspect_distress, f_eval.active_weights.get("aspect", 0)),
-            ("3. Forensic Accounting", f_eval.lane_scores.forensic_distress, f_eval.active_weights.get("forensic", 0)),
-            ("4. RST Discourse Masking", f_eval.lane_scores.discourse_distress, f_eval.active_weights.get("discourse", 0)),
-            ("5. Hedging & Obfuscation", f_eval.lane_scores.hedging_distress, f_eval.active_weights.get("hedging", 0)),
-        ]
-
-        for lane_name, lane_score, weight in lanes:
-            contrib = lane_score * weight
-            c_color = "red" if lane_score > 60 else "yellow" if lane_score > 30 else "green"
-            fusion_table.add_row(
-                lane_name,
-                f"[{c_color}]{lane_score:.1f}%[/{c_color}]",
-                f"{weight*100:.0f}%",
-                f"{contrib:.1f} pts"
-            )
-
-        fusion_table.add_section()
-        escalate_text = f"[bold red]YES ({len(f_eval.triggered_rules)} rules)[/]" if f_eval.escalation_applied else "[green]NO (Standard)[/]"
-        fusion_table.add_row("[bold]Composite Score (Fused)[/]", f"[bold {grade_color}]{f_eval.composite_distress_score:.1f}%[/]", "100%", f"Escalations: {escalate_text}")
-        console.print(fusion_table)
 
     # 3. Aspect-Based Financial Sentiment Table (ABSA)
     if res.absa_results:
@@ -569,6 +627,8 @@ def run_batch_directory(dir_path: str, advisor: FinancialAdvisor, deep_vision: b
     summary_table.add_column("Distress Score", style="white")
     summary_table.add_column("Risk Grade", style="white")
     summary_table.add_column("Policy Action", style="white")
+    summary_table.add_column("Completeness", style="white")
+    summary_table.add_column("Notes", style="dim white")
     summary_table.add_column("Latency", style="white")
 
     for fpath in files:
@@ -579,16 +639,20 @@ def run_batch_directory(dir_path: str, advisor: FinancialAdvisor, deep_vision: b
             from vision.pipeline import VisionPipeline
             vision = VisionPipeline(deep_vision=deep_vision)
             final_text = vision.process_document(parsed.raw_text, parsed.image_paths)
-        res = advisor.advise(final_text, exposure_value=args.exposure, show_trace=not args.quiet)
+        res = advisor.advise(final_text, financial_dict=getattr(parsed, "financial_dict", None), exposure_value=args.exposure, show_trace=not args.quiet)
         parsed.cleanup()
 
         color = "red" if res.risk_grade == RiskGrade.CRITICAL else "yellow" if res.risk_grade == RiskGrade.WARNING else "green"
+        comp_color = "red" if res.completeness == "THIN" else "yellow" if res.completeness == "PARTIAL" else "green"
+        notes_str = "; ".join(res.completeness_notes)
         summary_table.add_row(
             os.path.basename(fpath),
             res.sentiment_choice,
             f"{res.distress_score:.1f}/100",
             f"[{color}]{res.risk_grade.value}[/{color}]",
             f"[{color}]{res.action_flag.value}[/{color}]",
+            f"[{comp_color}]{res.completeness}[/{comp_color}]",
+            notes_str,
             f"{res.inference_time_ms:.1f}ms"
         )
 

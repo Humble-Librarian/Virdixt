@@ -191,7 +191,8 @@ class DocumentParser:
             file_type="EXCEL",
             page_count=sheet_count,
             has_visuals=len(image_paths) > 0,
-            temp_dir=temp_dir
+            temp_dir=temp_dir,
+            financial_dict=financial_dict
         )
 
     @staticmethod

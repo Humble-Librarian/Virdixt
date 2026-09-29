@@ -21,6 +21,9 @@ class ForensicScoreResult:
     beneish_manipulation_risk: str = "N/A"  # LOW_RISK, HIGH_MANIPULATION_RISK
     piotroski_f_score: Optional[int] = None
     piotroski_grade: str = "N/A"  # STRONG (7-9), MODERATE (4-6), WEAK (0-3)
+    altman_calculated: bool = False
+    beneish_calculated: bool = False
+    piotroski_calculated: bool = False
     notes: list[str] = field(default_factory=list)
 
 
@@ -28,9 +31,11 @@ class ForensicAccountingEngine:
     """Computes traditional quantitative accounting metrics from structured financial matrices."""
 
     @staticmethod
-    def _extract_metric(data: Dict[str, float], keywords: list[str]) -> Optional[float]:
+    def _extract_metric(data: Dict[str, float], keywords: list[str], exclude: Optional[list[str]] = None) -> Optional[float]:
         for k, v in data.items():
             k_lower = k.lower().replace("_", " ").replace("-", " ")
+            if exclude and any(ex in k_lower for ex in exclude):
+                continue
             if any(kw in k_lower for kw in keywords):
                 return v
         return None
@@ -47,75 +52,124 @@ class ForensicAccountingEngine:
         # Extract core financial balance sheet figures
         rev = cls._extract_metric(financial_dict, ["revenue", "sales"])
         ebit = cls._extract_metric(financial_dict, ["operating income", "ebit", "operating profit"])
-        net_income = cls._extract_metric(financial_dict, ["net income", "net profit", "income"])
-        total_assets = cls._extract_metric(financial_dict, ["total assets", "assets"]) or 100000000.0  # default normalization
+        net_income = cls._extract_metric(financial_dict, ["net income", "net profit", "income"], exclude=["operating income"])
+        total_assets = cls._extract_metric(financial_dict, ["total assets", "assets"])
         total_debt = cls._extract_metric(financial_dict, ["total debt", "debt", "liabilities"])
-        cash = cls._extract_metric(financial_dict, ["cash", "cash and cash equivalents", "liquidity"])
-        working_cap = cls._extract_metric(financial_dict, ["working capital"]) or ((cash or 0) * 1.2)
-        retained_earn = cls._extract_metric(financial_dict, ["retained earnings"]) or ((net_income or 0) * 0.8)
-        equity = cls._extract_metric(financial_dict, ["equity", "total equity", "book value"]) or (total_assets - (total_debt or 0))
+        cash = cls._extract_metric(financial_dict, ["cash and cash equivalents", "cash & cash equivalents", "cash balance", "liquidity", "cash"], exclude=["cash flow"])
+        working_cap = cls._extract_metric(financial_dict, ["working capital"])
+        retained_earn = cls._extract_metric(financial_dict, ["retained earnings"])
+        equity = cls._extract_metric(financial_dict, ["equity", "total equity", "shareholders equity", "shareholder equity", "book value"])
+
+        # Strict Accounting Identity Derivation:
+        # Assets = Liabilities + Equity (derive total_assets = equity + total_debt only if both are present)
+        if total_assets is None:
+            if equity is not None and total_debt is not None:
+                total_assets = equity + total_debt
 
         notes = []
+
+        # If Total Assets is genuinely missing or non-positive, skip asset-dependent calculations entirely
+        if total_assets is None or total_assets <= 0:
+            notes.append("Total Assets not provided")
+            return ForensicScoreResult(
+                calculated=True,
+                notes=notes
+            )
+
+        working_cap = working_cap if working_cap is not None else ((cash or 0) * 1.2)
+        retained_earn = retained_earn if retained_earn is not None else ((net_income or 0) * 0.8)
+        equity = equity if equity is not None else (total_assets - (total_debt or 0))
 
         # 1. Altman Z-Score Calculation
         # Z = 1.2(WC/TA) + 1.4(RE/TA) + 3.3(EBIT/TA) + 0.6(Equity/Debt) + 0.999(Sales/TA)
         altman_z = None
         altman_zone = "N/A"
+        altman_calculated = False
+        
+        # If total assets is explicitly pulled or defaults but is reasonably > 0
         if total_assets > 0:
             x1 = (working_cap or 0) / total_assets
             x2 = (retained_earn or 0) / total_assets
             x3 = (ebit or 0) / total_assets
-            debt_val = max(1.0, total_debt or 1.0)
-            x4 = (equity or 1.0) / debt_val
+            debt_val = max(0.1, total_debt or 0.1)
+            x4 = (equity or 0) / debt_val
             x5 = (rev or 0) / total_assets
 
-            altman_z = 1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 0.999 * x5
-
-            if altman_z < 1.81:
-                altman_zone = "DISTRESS ZONE (High Bankruptcy Risk)"
-            elif altman_z <= 2.99:
-                altman_zone = "GREY ZONE (Elevated Solvency Watch)"
+            z = 1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 0.999 * x5
+            
+            # Sanity check against division by near-zero resulting in extreme scores 
+            # (real-world Z-scores rarely exceed +/- 10)
+            if abs(z) < 100:
+                altman_z = z
+                altman_calculated = True
+                if altman_z < 1.81:
+                    altman_zone = "DISTRESS ZONE (High Bankruptcy Risk)"
+                elif altman_z <= 2.99:
+                    altman_zone = "GREY ZONE (Elevated Solvency Watch)"
+                else:
+                    altman_zone = "SAFE ZONE (Investment Grade Solvency)"
             else:
-                altman_zone = "SAFE ZONE (Investment Grade Solvency)"
+                altman_zone = "INVALID (Extreme Values)"
 
         # 2. Beneish M-Score Approximation
         # M-Score > -1.78 indicates high probability of manipulation
         beneish_m = None
-        beneish_risk = "LOW_RISK"
-        if rev and net_income is not None and (total_debt is not None):
+        beneish_risk = "N/A"
+        beneish_calculated = False
+        if rev and net_income is not None and (total_debt is not None) and total_assets > 0:
             # Detect aggressive earnings drift where debt surges while net income is flat or negative
-            leverage_drift = (total_debt / max(1.0, rev))
-            accruals = ((net_income - (cash or 0)) / max(1.0, total_assets))
-            beneish_m = -4.84 + (2.5 * accruals) + (1.2 * leverage_drift)
+            leverage_drift = (total_debt / max(0.1, rev))
+            accruals = ((net_income - (cash or 0)) / max(0.1, total_assets))
+            m = -4.84 + (2.5 * accruals) + (1.2 * leverage_drift)
 
-            if beneish_m > -1.78:
-                beneish_risk = "HIGH_MANIPULATION_RISK (Aggressive Accounting / Accrual Distortion)"
+            if abs(m) < 100:  # Real-world M-scores are typically between -5 and +5
+                beneish_m = m
+                beneish_calculated = True
+                if beneish_m > -1.78:
+                    beneish_risk = "HIGH_MANIPULATION_RISK (Aggressive Accounting / Accrual Distortion)"
+                else:
+                    beneish_risk = "LOW_RISK (Standard Accounting Integrity)"
             else:
-                beneish_risk = "LOW_RISK (Standard Accounting Integrity)"
+                beneish_risk = "INVALID (Extreme Values)"
 
         # 3. Piotroski F-Score (0-9 point health check)
         f_score = 0
-        if net_income and net_income > 0:
-            f_score += 1
-        if cash and cash > 0:
-            f_score += 1
-        if ebit and ebit > 0:
-            f_score += 1
-        if cash and net_income and cash > net_income:
-            f_score += 1  # High quality earnings (cash backed)
-        if total_debt and equity and (total_debt / max(1.0, equity)) < 1.5:
-            f_score += 1  # Moderate leverage
-        if rev and rev > 0:
-            f_score += 1
-        if working_cap and working_cap > 0:
-            f_score += 1
+        piotroski_calculated = False
+        valid_f_fields = 0
+        
+        if net_income is not None: valid_f_fields += 1
+        if cash is not None: valid_f_fields += 1
+        if ebit is not None: valid_f_fields += 1
+        if total_debt is not None: valid_f_fields += 1
+        if equity is not None: valid_f_fields += 1
+        if rev is not None: valid_f_fields += 1
+        if working_cap is not None: valid_f_fields += 1
 
-        if f_score >= 7:
-            f_grade = "STRONG (7-9 / 9)"
-        elif f_score >= 4:
-            f_grade = "MODERATE (4-6 / 9)"
+        if valid_f_fields >= 2:
+            piotroski_calculated = True
+            if net_income and net_income > 0:
+                f_score += 1
+            if cash and cash > 0:
+                f_score += 1
+            if ebit and ebit > 0:
+                f_score += 1
+            if cash and net_income and cash > net_income:
+                f_score += 1  # High quality earnings (cash backed)
+            if total_debt and equity and equity > 0 and (total_debt / equity) < 1.5:
+                f_score += 1  # Moderate leverage
+            if rev and rev > 0:
+                f_score += 1
+            if working_cap and working_cap > 0:
+                f_score += 1
+
+            if f_score >= 7:
+                f_grade = "STRONG (7-9 / 9)"
+            elif f_score >= 4:
+                f_grade = "MODERATE (4-6 / 9)"
+            else:
+                f_grade = "WEAK (0-3 / 9 - Operational Distress)"
         else:
-            f_grade = "WEAK (0-3 / 9 - Operational Distress)"
+            f_grade = "N/A"
 
         return ForensicScoreResult(
             calculated=True,
@@ -125,5 +179,8 @@ class ForensicAccountingEngine:
             beneish_manipulation_risk=beneish_risk,
             piotroski_f_score=f_score,
             piotroski_grade=f_grade,
+            altman_calculated=altman_calculated,
+            beneish_calculated=beneish_calculated,
+            piotroski_calculated=piotroski_calculated,
             notes=notes
         )

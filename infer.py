@@ -177,9 +177,13 @@ class AdvisorResult:
     hedging_result: Optional[HedgingAnalysisResult] = None
     discourse_result: Optional[DiscourseAnalysisResult] = None
     forensic_scores: Optional[ForensicScoreResult] = None
+
     completeness: str = "UNKNOWN"
     completeness_notes: List[str] = field(default_factory=list)
+
     inference_time_ms: float = 0.0
+    priority_index: float = 0.0
+
 
     def to_dict(self):
         import json
@@ -334,13 +338,15 @@ class FinancialAdvisor:
         self.discourse_parser = RhetoricalDiscourseParser()
         self.forensic_engine = ForensicAccountingEngine()
 
-    def advise(self, document: str, financial_dict: Optional[Dict[str, float]] = None) -> AdvisorResult:
+    def advise(self, document: str, financial_dict: Optional[Dict[str, float]] = None, exposure_value: float = 0.0, show_trace: bool = False) -> AdvisorResult:
+        if show_trace: console.print("\n[dim][1/6] Pruning document for anchor tokens...[/dim]")
         t0 = time.time()
         pruned_text = self.pruner.prune(document)
         if not pruned_text:
             pruned_text = document
         t_prune = time.time() - t0
 
+        if show_trace: console.print("[dim][2/6] Running FinBERT neural classification...[/dim]")
         t1 = time.time()
         choice_val = self.system1.choice(pruned_text)
         score_val = self.system1.score(pruned_text)
@@ -348,10 +354,18 @@ class FinancialAdvisor:
         probs = self.system1.get_calibrated_probs(pruned_text)
         t_sys1 = time.time() - t1
 
+        # Run Advanced NLP & Computational Linguistics Audits (All 5 Lanes)
         # Run Advanced NLP & Computational Linguistics Audits
+        if show_trace: console.print("[dim][3/6] Running Aspect-Based Sentiment (ABSA)...[/dim]")
         absa_results = self.absa_engine.evaluate(document)
+        
+        if show_trace: console.print("[dim][4/6] Running Hedging & Deception audit...[/dim]")
         hedging_res = self.hedging_detector.analyze(document)
+        
+        if show_trace: console.print("[dim][5/6] Parsing Rhetorical Discourse...[/dim]")
         discourse_res = self.discourse_parser.parse(document)
+        
+        if show_trace: console.print("[dim][6/6] Computing Forensic Accounting metrics...[/dim]")
         forensic_res = self.forensic_engine.compute(financial_dict or {})
 
         neg_prob = probs["negative"]
@@ -371,6 +385,7 @@ class FinancialAdvisor:
         comp, comp_notes = evaluate_completeness(document, pruned_text, absa_results, forensic_res)
 
         total_time_ms = (t_prune + t_sys1) * 1000.0
+        priority_index = (score_val / 100.0) * exposure_value
 
         return AdvisorResult(
             risk_grade=final_grade,
@@ -389,7 +404,8 @@ class FinancialAdvisor:
             forensic_scores=forensic_res,
             completeness=comp,
             completeness_notes=comp_notes,
-            inference_time_ms=total_time_ms
+            inference_time_ms=total_time_ms,
+            priority_index=priority_index
         )
 
 
@@ -408,21 +424,22 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
     table.add_column("Verdict / Calibrated Value", style="white")
 
     table.add_row("Sentiment Choice", f"[{'red' if res.sentiment_choice=='NEGATIVE' else 'green' if res.sentiment_choice=='POSITIVE' else 'yellow'}]{res.sentiment_choice}[/]")
-    table.add_row("Distress Index Score", f"{res.distress_score:.1f} / 100.0 (0=Peak Health, 100=Insolvency)")
+    table.add_row("Composite Distress Score", f"[bold {grade_color}]{res.distress_score:.1f}[/] / 100.0 (5-Lane Fused Index)")
     table.add_row("Calibrated Probabilities", f"Neg: {res.calibrated_probs['negative']*100:.1f}% | Neu: {res.calibrated_probs['neutral']*100:.1f}% | Pos: {res.calibrated_probs['positive']*100:.1f}%")
     table.add_row("Risk Grade", f"[{grade_color}]{res.risk_grade.value}[/{grade_color}]")
     if res.override_reasons:
         table.add_row("Overrides", f"[bold red]Escalated from {res.base_grade.value} to {res.risk_grade.value}: {', '.join(res.override_reasons)}[/]")
     table.add_row("Exposure Tier", f"[{grade_color}]{res.exposure_tier.value}[/{grade_color}]")
     table.add_row("ERP Policy Action", f"[{grade_color}]{res.action_flag.value}[/{grade_color}]")
-    
+    if res.priority_index > 0:
+        table.add_row("Priority (Risk x Exposure)", f"[bold red]${res.priority_index:,.2f}[/bold red]")
+
     if res.completeness:
         c_style = "bold red" if res.completeness == "THIN" else "bold yellow" if res.completeness == "PARTIAL" else "bold green"
         table.add_row("Completeness Badge", f"[{c_style}]{res.completeness}[/{c_style}]")
         if res.completeness_notes:
             notes_str = "\n".join([f"  - {n}" for n in res.completeness_notes])
             table.add_row("Completeness Notes", f"[dim]{notes_str}[/dim]")
-
     table.add_row("Inference Latency", f"[bold green]{res.inference_time_ms:.2f} ms[/]")
 
     noul_str = (
@@ -436,7 +453,9 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
     console.print()
     console.print(table)
 
-    # 2. Aspect-Based Financial Sentiment Table (ABSA)
+
+
+    # 3. Aspect-Based Financial Sentiment Table (ABSA)
     if res.absa_results:
         absa_table = Table(title="🔍 Aspect-Based Sentiment & Multi-Entity Risk (ABSA)", style="magenta")
         absa_table.add_column("Financial Aspect", style="bold cyan", width=26)
@@ -463,7 +482,7 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
             )
         console.print(absa_table)
 
-    # 3. Linguistic Deception & Hedging Audit Panel
+    # 4. Linguistic Deception & Hedging Audit Panel
     if res.hedging_result and (res.hedging_result.hedging_score > 0 or res.hedging_result.gunning_fog_index > 0):
         h = res.hedging_result
         h_color = "red" if h.hedging_level in ["EXTREME_EVASION", "HIGH_UNCERTAINTY"] else "yellow" if h.hedging_level == "MODERATE" else "green"
@@ -481,7 +500,7 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
         )
         console.print(hedge_panel)
 
-    # 4. Rhetorical Discourse & Concessive Nucleus Breakdown
+    # 5. Rhetorical Discourse & Concessive Nucleus Breakdown
     if res.discourse_result and res.discourse_result.has_concessive_structures:
         d = res.discourse_result
         deceptive_pairs = [p for p in d.pairs if p.is_deceptive_buffer]
@@ -497,7 +516,7 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
         disc_panel = Panel("\n".join(disc_text), title="⚖️ Rhetorical Structure Theory (RST) Discourse Analysis", style="cyan")
         console.print(disc_panel)
 
-    # 5. Deterministic Forensic Accounting Suite (Altman Z + Beneish M + Piotroski F)
+    # 6. Deterministic Forensic Accounting Suite (Altman Z + Beneish M + Piotroski F)
     if res.forensic_scores and res.forensic_scores.calculated:
         f = res.forensic_scores
         z_color = "red" if "DISTRESS" in f.altman_zone else "yellow" if "GREY" in f.altman_zone else "green"
@@ -514,11 +533,12 @@ def display_advisor_report(res: AdvisorResult, source_title: str = "Analysis Res
         forensic_table.add_row("Piotroski F-Score", f"{f.piotroski_f_score} / 9" if f.piotroski_f_score is not None else "N/A", f"[{f_color}]{f.piotroski_grade}[/{f_color}]")
         console.print(forensic_table)
 
-    # 6. Action Recommendations
+    # 7. Action Recommendations & Governance Alerts
     recs_str = "\n".join([f"• {r}" for r in res.action_recommendations])
     rec_panel = Panel(recs_str, title="🛡️ ERP Policy Directives & Commercial Actions", style=grade_color)
     console.print(rec_panel)
     console.print()
+
 
 
 def process_file_input(file_path: str, advisor: FinancialAdvisor, deep_vision: bool = False):
@@ -545,7 +565,7 @@ def process_file_input(file_path: str, advisor: FinancialAdvisor, deep_vision: b
     else:
         console.print("[dim][+] Pure text report: Vision pipeline bypassed (0ms visual overhead).[/dim]")
 
-    result = advisor.advise(final_text, financial_dict=getattr(parsed, "financial_dict", None))
+    result = advisor.advise(final_text, financial_dict=getattr(parsed, "financial_dict", None), exposure_value=args.exposure, show_trace=not args.quiet)
     display_advisor_report(result, source_title=os.path.basename(file_path))
     parsed.cleanup()
     return result
@@ -576,7 +596,7 @@ def run_interactive_mode(advisor: FinancialAdvisor, deep_vision: bool = False):
                 process_file_input(clean_path, advisor, deep_vision=deep_vision)
             else:
                 # Direct text evaluation
-                res = advisor.advise(user_input)
+                res = advisor.advise(user_input, exposure_value=args.exposure, show_trace=not args.quiet)
                 display_advisor_report(res, source_title="Interactive Prompt")
         except KeyboardInterrupt:
             console.print("\n[dim]Session terminated.[/dim]")
@@ -619,7 +639,7 @@ def run_batch_directory(dir_path: str, advisor: FinancialAdvisor, deep_vision: b
             from vision.pipeline import VisionPipeline
             vision = VisionPipeline(deep_vision=deep_vision)
             final_text = vision.process_document(parsed.raw_text, parsed.image_paths)
-        res = advisor.advise(final_text, financial_dict=getattr(parsed, "financial_dict", None))
+        res = advisor.advise(final_text, financial_dict=getattr(parsed, "financial_dict", None), exposure_value=args.exposure, show_trace=not args.quiet)
         parsed.cleanup()
 
         color = "red" if res.risk_grade == RiskGrade.CRITICAL else "yellow" if res.risk_grade == RiskGrade.WARNING else "green"
@@ -668,6 +688,8 @@ if __name__ == "__main__":
     parser.add_argument("--pytorch", action="store_true", help="Force PyTorch backend")
     parser.add_argument("--deep-vision", action="store_true", help="Enable deep Google DePlot token autoregression")
     parser.add_argument("--test", action="store_true", help="Run validation scenario benchmarks")
+    parser.add_argument("--exposure", type=float, default=0.0, help="Dollar exposure amount for risk priority calculation")
+    parser.add_argument("--quiet", action="store_true", help="Hide processing trace pipeline steps")
     args = parser.parse_args()
 
     # Determine backend: ONNX by default if available unless --pytorch is set

@@ -295,24 +295,30 @@ class LayaSystem1:
             "positive": float(probs[pos_idx]),
         }
 
-    def choice(self, text: str, temperature: float = 1.25) -> str:
+    def get_all_predictions(self, text: str, temperature: float = 1.25) -> Tuple[Dict[str, float], str, float, NoulResult]:
         probs = self.get_calibrated_probs(text, temperature)
         sorted_labels = sorted(probs.items(), key=lambda x: x[1], reverse=True)
-        return sorted_labels[0][0].upper()
+        choice_val = sorted_labels[0][0].upper()
+        score_val = max(0.0, min(100.0, (probs["negative"] * 100.0) + (probs["neutral"] * 15.0) - (probs["positive"] * 35.0)))
+        noul_val = NoulResult(
+            liquidity_distress=probs["negative"] * 100.0,
+            debt_covenant_breach_risk=(probs["negative"] * 0.85 + probs["neutral"] * 0.15) * 100.0,
+            growth_expansion_momentum=probs["positive"] * 100.0,
+            capital_return_sustainable=(probs["positive"] * 0.80 + probs["neutral"] * 0.20) * 100.0,
+        )
+        return probs, choice_val, score_val, noul_val
+
+    def choice(self, text: str, temperature: float = 1.25) -> str:
+        _, choice_val, _, _ = self.get_all_predictions(text, temperature)
+        return choice_val
 
     def score(self, text: str) -> float:
-        p = self.get_calibrated_probs(text)
-        score_val = (p["negative"] * 100.0) + (p["neutral"] * 15.0) - (p["positive"] * 35.0)
-        return max(0.0, min(100.0, score_val))
+        _, _, score_val, _ = self.get_all_predictions(text)
+        return score_val
 
     def noul(self, text: str) -> NoulResult:
-        p = self.get_calibrated_probs(text)
-        return NoulResult(
-            liquidity_distress=p["negative"] * 100.0,
-            debt_covenant_breach_risk=(p["negative"] * 0.85 + p["neutral"] * 0.15) * 100.0,
-            growth_expansion_momentum=p["positive"] * 100.0,
-            capital_return_sustainable=(p["positive"] * 0.80 + p["neutral"] * 0.20) * 100.0,
-        )
+        _, _, _, noul_val = self.get_all_predictions(text)
+        return noul_val
 
 
 class AnchorTokenPruner:
@@ -348,10 +354,13 @@ class FinancialAdvisor:
 
         if show_trace: console.print("[dim][2/6] Running FinBERT neural classification...[/dim]")
         t1 = time.time()
-        choice_val = self.system1.choice(pruned_text)
-        score_val = self.system1.score(pruned_text)
-        noul_val = self.system1.noul(pruned_text)
-        probs = self.system1.get_calibrated_probs(pruned_text)
+        if hasattr(self.system1, "get_all_predictions"):
+            probs, choice_val, score_val, noul_val = self.system1.get_all_predictions(pruned_text)
+        else:
+            probs = self.system1.get_calibrated_probs(pruned_text)
+            choice_val = self.system1.choice(pruned_text)
+            score_val = self.system1.score(pruned_text)
+            noul_val = self.system1.noul(pruned_text)
         t_sys1 = time.time() - t1
 
         # Run Advanced NLP & Computational Linguistics Audits (All 5 Lanes)

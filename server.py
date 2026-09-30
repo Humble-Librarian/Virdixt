@@ -137,6 +137,9 @@ async def list_samples():
             files.append({"filename": f, "size": f"{size/1024:.1f} KB"})
     return files
 
+from starlette.concurrency import run_in_threadpool
+import tempfile
+
 @app.post("/api/analyze")
 async def analyze_document(
     file: Optional[UploadFile] = File(None),
@@ -153,20 +156,24 @@ async def analyze_document(
         if len(content) > 100 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="File too large (Max 100MB)")
         
-        # Save temp file for DocumentParser
-        temp_path = f".temp_{file.filename}"
-        with open(temp_path, "wb") as f_out:
-            f_out.write(content)
+        # Save unique isolated temp file to prevent concurrent race collisions
+        ext = os.path.splitext(file.filename)[1]
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            tmp.write(content)
+            temp_path = tmp.name
         
         try:
-            parsed = DocumentParser.parse(temp_path, extract_images=False)
+            parsed = await run_in_threadpool(DocumentParser.parse, temp_path, extract_images=False)
             file_meta = {"name": file.filename, "size": len(content)}
             final_text = parsed.raw_text
             fin_dict = getattr(parsed, "financial_dict", None)
             parsed.cleanup()
         finally:
             if os.path.exists(temp_path):
-                os.remove(temp_path)
+                try:
+                    os.remove(temp_path)
+                except Exception:
+                    pass
                 
     elif sample_name:
         sample_path = os.path.join("data", "sample_reports", sample_name)
@@ -175,7 +182,7 @@ async def analyze_document(
             
         tracer.log("INGESTION", f"Reading sample file {sample_name}")
         size = os.path.getsize(sample_path)
-        parsed = DocumentParser.parse(sample_path, extract_images=False)
+        parsed = await run_in_threadpool(DocumentParser.parse, sample_path, extract_images=False)
         file_meta = {"name": sample_name, "size": size}
         final_text = parsed.raw_text
         fin_dict = getattr(parsed, "financial_dict", None)
@@ -190,7 +197,7 @@ async def analyze_document(
     else:
         raise HTTPException(status_code=400, detail="Must provide file, text, or sample_name")
 
-    return process_and_format(final_text, file_meta, exposure, fin_dict)
+    return await run_in_threadpool(process_and_format, final_text, file_meta, exposure, fin_dict)
 
 
 @app.post("/api/simulate")
@@ -199,7 +206,7 @@ async def simulate_whatif(
     exposure: float = Form(...)
 ):
     advisor: FinancialAdvisor = ml_models["advisor"]
-    res = advisor.advise(text, exposure_value=exposure, show_trace=False)
+    res = await run_in_threadpool(advisor.advise, text, exposure_value=exposure, show_trace=False)
     
     masking_data = format_masking(res)
     masking_data["exposure"] = exposure

@@ -83,8 +83,11 @@ class ABSAEngine:
 
             joined_text = " ".join(sents[:4])  # Take up to top 4 sentences
             probs = self.system1.get_calibrated_probs(joined_text)
-            choice = self.system1.choice(joined_text)
-            score = self.system1.score(joined_text)
+            
+            # Fast in-memory derivation without extra model forward passes
+            sorted_labels = sorted(probs.items(), key=lambda x: x[1], reverse=True)
+            choice = sorted_labels[0][0].upper()
+            score = max(0.0, min(100.0, (probs["negative"] * 100.0) + (probs["neutral"] * 15.0) - (probs["positive"] * 35.0)))
 
             if score > 70 or probs["negative"] > 0.60:
                 risk = "CRITICAL"

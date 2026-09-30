@@ -22,6 +22,25 @@ class HedgingAnalysisResult:
     passive_phrases: List[str] = field(default_factory=list)
 
 
+from functools import lru_cache
+
+# Pre-compiled static regexes for syllable counting (zero re-compilation overhead)
+_SYLLABLE_SUB_1 = re.compile(r'(?:[^laeiouy]|ed|es|e)$')
+_SYLLABLE_SUB_2 = re.compile(r'^y')
+_SYLLABLE_FIND = re.compile(r'[aeiouy]{1,2}')
+
+@lru_cache(maxsize=8192)
+def _fast_count_syllables(word: str) -> int:
+    """Memoized syllable counter for Gunning-Fog readability computation."""
+    word = word.lower().strip()
+    if len(word) <= 3:
+        return 1
+    word = _SYLLABLE_SUB_1.sub('', word)
+    word = _SYLLABLE_SUB_2.sub('', word)
+    syllables = len(_SYLLABLE_FIND.findall(word))
+    return max(1, syllables)
+
+
 class LinguisticHedgingDetector:
     """Computational linguistics module for detecting executive evasion and obfuscation."""
 
@@ -53,14 +72,7 @@ class LinguisticHedgingDetector:
         self.euphemism_regexes = [re.compile(p, re.IGNORECASE) for p in self.EUPHEMISMS]
 
     def _count_syllables(self, word: str) -> int:
-        """Heuristic syllable counter for Gunning-Fog readability computation."""
-        word = word.lower().strip()
-        if len(word) <= 3:
-            return 1
-        word = re.sub(r'(?:[^laeiouy]|ed|es|e)$', '', word)
-        word = re.sub(r'^y', '', word)
-        syllables = len(re.findall(r'[aeiouy]{1,2}', word))
-        return max(1, syllables)
+        return _fast_count_syllables(word)
 
     def analyze(self, document: str) -> HedgingAnalysisResult:
         """Performs full linguistic audit on document text."""

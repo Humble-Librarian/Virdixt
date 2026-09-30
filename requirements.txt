@@ -11,7 +11,14 @@ onnx>=1.14.0
 onnxruntime>=1.16.0
 onnxscript>=0.1.0
 
-# CLI & Rich Formatting
+# Web Server, API & Concurrency
+fastapi>=0.110.0
+uvicorn>=0.28.0
+python-multipart>=0.0.9
+starlette>=0.36.0
+httpx>=0.27.0
+
+# CLI & Rich Terminal Formatting
 rich>=13.0.0
 
 # Universal Document & Spreadsheet Ingestion
@@ -21,10 +28,14 @@ python-docx>=1.0.0
 openpyxl>=3.1.0
 pandas>=2.0.0
 
-# Vision & Multimodal Subsystem & OCR
+# Vision, Optical Image Restoration & OCR Subsystem
 pillow>=9.0.0
 timm>=0.9.0
 einops>=0.7.0
 opencv-python>=4.5.0
 rapidocr_onnxruntime>=1.2.0
+pyclipper>=1.2.1
+shapely>=1.7.1
 
+# Testing & Quality Assurance
+pytest>=8.0.0

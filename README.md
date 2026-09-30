@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/Model-FinBERT-blue?style=for-the-badge&logo=huggingface" />
   <img src="https://img.shields.io/badge/Accuracy-90.26%25-brightgreen?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Macro_F1-0.9022-brightgreen?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Runtime-ONNX_%2B_C%2B%2B20-purple?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Formats-PDF_%7C_DOCX_%7C_TXT-orange?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Runtime-ONNX_%2B_FastAPI-purple?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Formats-PDF_%7C_DOCX_%7C_XLSX_%7C_CSV_%7C_IMG-orange?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
@@ -13,17 +13,22 @@
 
 ## 📌 Executive Summary
 
-**Virdixt** is an enterprise-grade financial sentiment analysis and automated risk-routing engine. Built on a domain-fine-tuned **FinBERT** backbone and augmented with **Laya System-1 Decision Primitives**, Virdixt ingests unstructured enterprise documents (**PDFs**, **Word DOCX**, and **Text filings**), parses embedded financial charts, resolves complex multi-clause financial disclosures, and routes high-risk counterparties to automated ERP policy actions in sub-10 milliseconds.
+**Virdixt** is an air-gapped, enterprise-grade financial intelligence and automated risk-routing engine. Built on a fine-tuned **FinBERT** backbone and augmented with **Laya System-1 Decision Primitives**, Virdixt ingests unstructured enterprise documents (**PDFs**, **scanned receipts**, **Word DOCX**, **Excel workbooks**, **CSVs**, and **Images**), recovers degraded scans via OpenCV image restoration, parses financial charts, resolves complex multi-clause financial disclosures, and routes high-risk counterparties to automated ERP policy actions in sub-10 milliseconds.
 
-> 📖 **Internal Architecture Walkthrough:** For a file-by-file visual breakdown, interactive dependency matrices, and deep implementation details, see **[`ARCHITECTURE_WALKTHROUGH.md`](ARCHITECTURE_WALKTHROUGH.md)**.
+> 📖 **Internal Architecture Walkthrough:** For a file-by-file visual breakdown, interactive dependency matrices, and step-by-step lifecycle explanations, see **[`ARCHITECTURE_WALKTHROUGH.md`](ARCHITECTURE_WALKTHROUGH.md)**.
 
 ---
 
 ## 🚀 Key Capabilities
 
-* **Universal Multi-Format Document Ingestion:** Native, zero-overhead parser for **PDF**, **DOCX**, **CSV**, **Excel (.xlsx)**, and **TXT** files with deterministic sentencification and embedded chart extraction.
+* **🌐 Interactive Web Audit Dashboard & Telemetry UI:** Modern, dark-mode real-time visualizer with live ingestion trace logs, multi-lane explainability bars, quantitative audit metrics, and an interactive "What-If" exposure slider.
+* **🔍 Zero-Tax OCR & OpenCV Optical Image Restoration:** Dual-path ingestion:
+  - **Fast Vector Path (<5ms, 0 MB RAM):** Uses `PyMuPDF` (`fitz`) for clean digital PDFs.
+  - **Degraded Scan Fallback:** Automatically detects scanned/blurry pages, applies **CLAHE contrast equalization, bilateral edge-preserving denoising, morphological deskewing, and unsharp masking**, then extracts structured text via lightweight **RapidOCR ONNX** (<150MB RAM).
+* **🔀 5-Lane Composite Fusion & Rule Engine (`nlp/fusion.py`):** Synthesizes intelligence across **Global FinBERT Sentiment**, **5-Aspect ABSA**, **Forensic Accounting (Altman Z / Beneish M / Piotroski F)**, **RST Discourse Masking**, and **Linguistic Hedging / Gunning-Fog Index**.
+* **⚡ Single-Pass Neural Execution:** `LayaSystem1` computes calibrated probabilities, sentiment choices, continuous distress scores, and NOUL metrics in **1 single forward pass**, cutting CPU inference latency by $>70\%$.
 * **Aspect-Based Financial Sentiment Analysis (ABSA):** Multi-entity token decomposition evaluating distinct operational aspects (`Top-Line & Growth`, `Cost & Margin Structure`, `Liquidity & Cash Burn`, `Debt & Solvency`, `Audit & Governance Risk`) independently.
-* **Linguistic Deception & Executive Hedging Audit:** Computational linguistics engine measuring Epistemic Uncertainty scores, Agentless Passive Voice Evasion, Gunning-Fog Obfuscation indexes, and corporate euphemisms.
+* **Linguistic Deception & Executive Hedging Audit:** Computational linguistics engine measuring Epistemic Uncertainty scores, Agentless Passive Voice Evasion, Gunning-Fog Obfuscation indexes, and corporate euphemisms with memoized syllable parsing.
 * **Rhetorical Structure Theory (RST) Concessive Parsing:** Identifies rhetorical masking by separating superficial *Satellites* (buffer clauses) from core *Nuclei* (dominant economic realities).
 * **Deterministic Quantitative Forensic Accounting:** Microsecond calculations of institutional solvency benchmarks (**Altman Z-Score**, **Beneish M-Score**, **Piotroski F-Score**) with zero external dependencies.
 * **Deterministic Chart-to-Table Vision Subsystem:** Detects financial graphs, extracts underlying tables, and computes exact percentage deltas to inject concessive commentary without visual hallucination.
@@ -35,8 +40,7 @@
   * **`Score`:** Continuous Financial Distress Index $[0.0, 100.0]$ ($0 = \text{Peak Solvency}, 100 = \text{Imminent Distress}$).
   * **`Noul`:** Calibrated probability propositions ($P(\text{Liquidity Distress})$, $P(\text{Covenant Breach})$, $P(\text{Growth Momentum})$).
 * **Automated ERP Policy Engine (`POLICY_TABLE`):** Strict deterministic mapping from risk grades to exposure tiers (`TIER_1_SAFE` to `TIER_4_BLOCKED`), policy action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`), and actionable operational directives.
-* **100% Air-Gapped / Zero-Cloud Leakage:** Operates entirely offline on standard CPU/GPU using native ONNX runtimes. Zero data ever leaves the local machine.
-
+* **🔒 100% Air-Gapped / Zero-Cloud Leakage:** Operates entirely offline on standard CPU/GPU using native ONNX runtimes. Zero data ever leaves the local machine.
 
 ---
 
@@ -44,10 +48,14 @@
 
 ```mermaid
 flowchart TD
-    subgraph INGESTION["📂 1. MULTI-FORMAT INGESTION"]
-        INPUT[Document: .pdf / .docx / .txt] --> PARSE[Universal DocumentParser]
-        PARSE -->|Text Stream| PRUNE[Anchor Token Pruner]
-        PARSE -->|Embedded Visual Assets| DETECT[Florence-2 Chart Detector]
+    subgraph INGESTION["📂 1. MULTI-FORMAT INGESTION & SMART OCR"]
+        INPUT[Document: .pdf / .docx / .xlsx / .csv / .txt / .png] --> PARSE[Universal DocumentParser]
+        PARSE -->|Digital PDF / DOCX| PRUNE[Anchor Token Pruner]
+        PARSE -->|Scanned / Blurry Scan| ENHANCE[OpenCV Image Restorer: CLAHE + Bilateral + Deskew]
+        ENHANCE --> OCR[RapidOCR ONNX Engine <150MB RAM]
+        OCR --> PRUNE
+        PARSE -->|Spreadsheet / Balances| FOR_ENG[Forensic Accounting Engine]
+        PARSE -->|Embedded Charts| DETECT[Florence-2 Chart Detector]
     end
 
     subgraph VISION["👁️ 2. MULTIMODAL VISION PIPELINE"]
@@ -56,15 +64,27 @@ flowchart TD
         DELTA -->|Concessive Sentence Injection| PRUNE
     end
 
-    subgraph DECISION["⚡ 3. LAYA SYSTEM-1 RUNTIME (ONNX / C++)"]
-        PRUNE --> FINBERT[FinBERT Backbone / ONNX INT8]
+    subgraph AUDITS["🧠 3. 5-LANE ADVANCED NLP & FORENSIC AUDITS"]
+        PRUNE --> ABSA[ABSA: 5 Operational Aspects]
+        PRUNE --> HEDGE[Hedging & Deception Detector]
+        PRUNE --> DISC[RST Concessive Discourse Parser]
+        FOR_ENG --> FUSION[5-Lane Composite Fusion Engine]
+        ABSA --> FUSION
+        HEDGE --> FUSION
+        DISC --> FUSION
+    end
+
+    subgraph DECISION["⚡ 4. LAYA SYSTEM-1 RUNTIME (ONNX / C++)"]
+        PRUNE --> FINBERT[FinBERT Single-Pass ONNX Engine]
         FINBERT --> LAYA[Laya System-1 Primitives]
-        LAYA -->|Choice, Score 0-100, Noul| ERP[Financial Advisor & Policy Engine]
+        LAYA --> FUSION
+        FUSION --> ERP[Financial Advisor & Policy Engine]
         ERP --> ACTION[Policy Action: FREEZE_PURCHASE_ORDERS / PROCEED]
     end
 
     style INGESTION fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4
     style VISION fill:#181825,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4
+    style AUDITS fill:#181825,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4
     style DECISION fill:#11111b,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4
 ```
 
@@ -80,8 +100,9 @@ Fine-tuned on a balanced 6,300-row master dataset ($1:1:1$ Negative / Neutral / 
 | **Macro F1 Score** | **0.9022** | $+0.221$ over generic classifiers |
 | **Negative Recall** | **88.64%** | **$\uparrow$ from 9.5%** (Prevents missed insolvency signals) |
 | **Macro Precision** | **0.9027** | High confidence across all classes |
-| **Inference Latency (ONNX CPU)** | **~5–10 ms** | Warm resident model throughput |
+| **Inference Latency (ONNX CPU)** | **~5–10 ms** | Warm single-pass resident model throughput |
 | **Inference Latency (ONNX GPU)** | **~1.5 ms** | Batch acceleration available |
+| **RAM Footprint** | **< 200 MB** | 100% stable on 4 GB RAM systems |
 
 ### Validation Confusion Matrix (945 Samples)
 ```
@@ -102,246 +123,68 @@ cd Virdixt
 pip install -r requirements.txt
 ```
 
-### 2. Export Optimized ONNX Model
+### 2. Launch the Web Audit Dashboard
 ```bash
-# Export FP16 ONNX model:
-python export_onnx.py
-
-# Export INT8 Quantized ONNX model (3x faster on CPU):
-python export_onnx.py --quantize
+python server.py
 ```
+Open your browser at **`http://localhost:8000`** to access the live dashboard, upload documents, inspect telemetry traces, and run what-if simulations.
 
----
-
-## ⚡ Inference & Usage Modes
-
-### Mode 1: Single File Document Audit (PDF, DOCX, CSV, Excel, TXT)
-Ingest and analyze any financial document, unstructured text filing, or structured spreadsheet:
+### 3. Command-Line Inference (Any Document)
 ```bash
-# Analyze a CSV spreadsheet (Narrative Audit Log or Pure Numbers):
-python infer.py --file data/sample_reports/narrative_audit_log.csv
-python infer.py --file data/sample_reports/pure_numerical_distress.csv
+# Analyze a digital PDF, scanned image, Excel sheet, DOCX, CSV, or TXT
+python infer.py --file "data/sample_reports/corporate_filing.xlsx"
 
-# Analyze an Excel workbook (.xlsx / .xls):
-python infer.py --file data/sample_reports/corporate_filing.xlsx
-
-# Analyze a PDF filing:
-python infer.py --file data/sample_reports/covenant_breach.pdf
-
-# Analyze a Word document (.docx):
-python infer.py --file data/sample_reports/healthy_report.docx
-
-# Analyze a plain text document (.txt):
-python infer.py --file data/sample_reports/distress_report.txt
-
-# Analyze a multimodal document with embedded charts:
-python infer.py --file data/sample_reports/multimodal_report.docx
+# Analyze raw corporate text with financial exposure dollar value
+python infer.py --text "Although revenue rose by 14%, cash flow turned deeply negative." --exposure 500000
 ```
 
-### Mode 2: Multi-Document Batch Directory Audit
-Process an entire directory of mixed `.pdf`, `.docx`, `.csv`, `.xlsx`, and `.txt` files in a single warm session:
+### 4. Run the Full Test Suite
 ```bash
-python infer.py --batch data/sample_reports/
-```
-```text
-               === BATCH AUDIT SUMMARY: data/sample_reports/ ===                
-┏━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━┓
-┃ Filename     ┃ Choice   ┃ Distress     ┃ Risk Grade ┃ Policy       ┃ Latency ┃
-┃              ┃          ┃ Score        ┃            ┃ Action       ┃         ┃
-┡━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━┩
-│ covenant_br… │ NEGATIVE │ 97.3/100     │ CRITICAL   │ FREEZE_PURC… │ 192.5ms │
-│ distress_re… │ NEGATIVE │ 97.0/100     │ CRITICAL   │ FREEZE_PURC… │ 341.9ms │
-│ healthy_rep… │ POSITIVE │ 0.0/100      │ MINIMAL    │ PROCEED_NOR… │ 241.1ms │
-│ multimodal_… │ NEUTRAL  │ 27.6/100     │ MONITOR    │ PROCEED_NOR… │ 296.6ms │
-└──────────────┴──────────┴──────────────┴────────────┴──────────────┴─────────┘
-```
+# Run 14 integration, API, completeness, and override tests
+python -m pytest tests/
 
-### Mode 3: Warm Interactive REPL (Sub-10ms Latency)
-Maintains model weights resident in RAM for instant, continuous evaluations:
-```bash
-python infer.py --interactive
-```
-```text
-virdixt > data/sample_reports/distress_report.txt
-[Output returned in 8.2ms]
-
-virdixt > Organic ARR grew 45% and EBITDA margin expanded significantly.
-[Output returned in 6.4ms]
-```
-
-### Mode 4: Direct Text Evaluation
-```bash
-python infer.py --text "Supplier defaulted on debt covenants, $5M inventory write-down recognized."
-```
-
----
-
-## 🏛️ Sample Enterprise Audit Report
-
-When a report containing masked distress is evaluated:
-
-```text
-       === VIRDIXT FINANCIAL ADVISOR & ERP AUDIT: distress_report.txt ===       
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Decision Dimension         ┃ Verdict / Calibrated Value                      ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ Sentiment Choice           │ NEGATIVE                                        │
-│ Distress Index Score       │ 97.0 / 100.0 (0=Peak Health, 100=Insolvency)    │
-│ Calibrated Probabilities   │ Neg: 97.5% | Neu: 0.8% | Pos: 1.7%              │
-│ Risk Grade                 │ CRITICAL                                        │
-│ Exposure Tier              │ TIER_4_BLOCKED                                  │
-│ ERP Policy Action          │ FREEZE_PURCHASE_ORDERS                          │
-│ Inference Latency          │ 171.40 ms                                       │
-│ NOUL Hypotheses P(True)    │ - Liquidity Distress Risk   : 97.5%             │
-│                            │ - Debt Covenant Breach Risk : 83.0%             │
-│                            │ - Growth Expansion Momentum : 1.7%              │
-│                            │ - Sustainable Capital Return: 1.5%              │
-│ Action Directives          │ - IMMEDIATE: Freeze uncommitted purchase orders │
-│                            │ and discretionary capex.                        │
-│                            │ - CREDIT: Require 100% upfront cash or          │
-│                            │ irrevocable letters of credit.                  │
-│                            │ - AUDIT: Request immediate debt covenant        │
-│                            │ compliance certificate.                         │
-└────────────────────────────┴─────────────────────────────────────────────────┘
-```
-
----
-
-## ⚡ Zero-Overhead C++20 Runtime Engine
-
-Located in [`cpp/`](cpp/), the native C++ engine provides zero-copy execution:
-
-* **`include/laya_primitives.hpp`:** SIMD-friendly implementation of Temperature Softmax ($T=1.25$), continuous Distress Index $[0, 100]$, and sigmoid-calibrated Noul risk propositions (~40ns execution).
-* **`include/inference_engine.hpp`:** Direct Microsoft ONNX Runtime wrapper for AVX2 and NVIDIA CUDA execution providers.
-* **`include/text_preprocessor.hpp`:** High-speed regex anchor token pruner.
-* **`include/erp_advisor.hpp`:** Deterministic ERP policy engine mapping risk grades to operational directives.
-
-### Building & Running C++ Engine:
-```bash
-cd cpp
-cmake -B build -DONNXRUNTIME_DIR=/path/to/onnxruntime
-cmake --build build --config Release
-./build/virdixt_engine
-```
-
----
-
-## 🛠️ Dataset Engineering & Training Pipeline
-
-Virdixt includes an automated, reproducible data foundry to build balanced datasets and fine-tune models from scratch:
-
-```bash
-# 1. Download real-world market news:
-python prepare_data.py
-
-# 2. Algorithmic balance-sheet generator:
-python synthetic_builder.py
-
-# 3. Inject multi-clause concessive sentences:
-python complex_sentence_injector.py
-
-# 4. Assemble exact 1:1:1 balanced master dataset (6,300 rows):
-python build_rich_dataset.py
-
-# 5. Fine-tune FinBERT (PyTorch or Soup CLI):
-python train.py
-# OR: soup train --config soup.yaml
-
-# 6. Evaluate full classification report & confusion matrix:
-python eval.py
-```
-
----
-
-## 🧪 Comprehensive Verification & Test Suite
-
-Run the full end-to-end regression and unit test suite across overrides, completeness badges, integration flows, and OCR pipeline:
-
-```bash
-pytest -v
-```
-
-```text
-============================= test session starts =============================
-test_ocr_pipeline.py::test_ocr_pipeline PASSED                           [  8%]
-tests/test_advise_integration.py::test_distress_dict_escalates_minimal_to_critical PASSED [ 16%]
-tests/test_advise_integration.py::test_safe_dict_stays_minimal PASSED    [ 25%]
-tests/test_advise_integration.py::test_no_dict_stays_minimal PASSED      [ 33%]
-tests/test_advise_integration.py::test_evasive_text_escalates_minimal_to_warning PASSED [ 41%]
-tests/test_advise_integration.py::test_policy_table_consistency_across_all_grades PASSED [ 50%]
-tests/test_completeness.py::test_evaluate_completeness_speed_under_500ms PASSED [ 58%]
-tests/test_completeness.py::test_thin_document_returns_unknown_state PASSED [ 66%]
-tests/test_completeness.py::test_full_document_returns_signals_count PASSED [ 75%]
-tests/test_completeness.py::test_pruning_note_does_not_penalize_label PASSED [ 83%]
-tests/test_completeness.py::test_advisor_result_to_dict_serializable PASSED [ 91%]
-tests/test_overrides.py::test_overrides PASSED                           [100%]
-============================= 12 passed in 8.83s ==============================
+# Run OCR & optical image restoration verification test
+python test_ocr_pipeline.py
 ```
 
 ---
 
 ## 📁 Repository Structure
 
-```text
+```
 Virdixt/
-│
-├── 📄 requirements.txt               # Unified project dependencies
-├── 📄 soup.yaml                      # Declarative Soup CLI fine-tuning config
-├── 📄 README.md                      # Executive production documentation
-├── 📄 ARCHITECTURE_WALKTHROUGH.md     # Deep internal engineering & file-by-file guide
-│
-├── ── PYTHON DATA FOUNDRY & TRAINING ───
-├── 📄 prepare_data.py                # Hugging Face financial news downloader
-├── 📄 synthetic_builder.py           # Corporate accounting sentence generator
-├── 📄 complex_sentence_injector.py   # Multi-clause adversarial statement generator
-├── 📄 build_rich_dataset.py          # Master dataset assembler (balanced 6,300 rows)
-├── 📄 train.py                       # Standalone PyTorch fine-tuning script
-├── 📄 eval.py                        # Full metrics & confusion matrix evaluator
-├── 📄 export_onnx.py                 # ONNX & INT8 quantization graph exporter
-│
-├── ── COMPUTATIONAL NLP & REASONING ───
-├── 📂 nlp/
-│   ├── 📄 absa_engine.py             # Aspect-Based Sentiment Analysis (5 operational aspects)
-│   ├── 📄 linguistic_hedging.py      # Evasion detector, Epistemic score & Gunning-Fog index
-│   ├── 📄 discourse_parser.py        # Rhetorical Structure Theory (RST) concessive parser
-│   └── 📄 forensic_accounting.py     # Altman Z, Beneish M & Piotroski F calculations
-│
-├── ── INFERENCE & VISION SUBSYSTEM ─────
-├── 📄 document_parser.py             # Universal PDF, DOCX, CSV, Excel & TXT ingestor
-├── 📄 infer.py                       # Laya System-1 decision runtime & Policy Engine
-├── 📂 vision/
-│   ├── 📄 chart_detector.py          # Florence-2 chart classifier
-│   ├── 📄 chart_extractor.py         # Table extractor (Fast Heuristic & Google DePlot)
-│   ├── 📄 delta_calculator.py        # Deterministic delta math & concessive synthesizer
-│   ├── 📄 image_enhancer.py          # OpenCV restoration (CLAHE, deskew, bilateral filter)
-│   ├── 📄 ocr_engine.py              # RapidOCR ONNX layout-sorted engine
-│   └── 📄 pipeline.py                # Visual document orchestrator
-│
-├── ── TEST SUITE & BENCHMARKS ──────────
-├── 📂 tests/
-│   ├── 📄 test_advise_integration.py # End-to-end integration and policy table tests
-│   ├── 📄 test_completeness.py       # Data availability & completeness badge tests
-│   └── 📄 test_overrides.py          # Deterministic circuit-breaker override tests
-├── 📄 test_ocr_pipeline.py           # OCR & image enhancer validation suite
-│
-├── ── C++ HIGH-THROUGHPUT RUNTIME ──────
-├── 📂 cpp/
-│   ├── 📄 CMakeLists.txt             # Modern C++20 build configuration
-│   ├── 📂 include/
-│   │   ├── 📄 laya_primitives.hpp    # Laya System-1 math engine (~40ns)
-│   │   ├── 📄 inference_engine.hpp   # ONNX Runtime C++ wrapper
-│   │   ├── 📄 erp_advisor.hpp        # Deterministic ERP policy engine
-│   │   └── 📄 text_preprocessor.hpp  # Fast regex signal pruner
-│   └── 📂 src/
-│       └── 📄 main.cpp               # Multi-scenario C++ test runner
-│
-└── ── DATASETS & SAMPLES ───────────────
-    ├── 📂 data/                      # train.jsonl (5,355 rows) & val.jsonl (945 rows)
-    └── 📂 data/sample_reports/       # Test sample reports (.pdf, .docx, .txt, .csv, .xlsx)
+├── nlp/                         # Advanced Computational Linguistics & Forensic Math
+│   ├── absa_engine.py          # 5-Aspect operational sentiment decomposition
+│   ├── linguistic_hedging.py   # Epistemic hedging & Gunning-Fog obfuscation detector
+│   ├── discourse_parser.py     # Rhetorical Structure Theory (RST) Nucleus parser
+│   ├── forensic_accounting.py  # Deterministic Altman Z, Beneish M, Piotroski F
+│   └── fusion.py               # 5-Lane Composite Fusion & institutional rule engine
+├── vision/                      # Optical Restoration, OCR & Chart Processing
+│   ├── image_enhancer.py       # OpenCV CLAHE, bilateral filter, deskew & unsharp
+│   ├── ocr_engine.py           # RapidOCR ONNX engine with geometric layout sorter
+│   ├── delta_calculator.py     # Deterministic table & chart sentencification
+│   ├── chart_detector.py       # Visual chart bounding box detector
+│   └── pipeline.py             # End-to-end multimodal injection pipeline
+├── static/                      # Interactive Web Audit Dashboard & Telemetry UI
+│   ├── index.html              # Modern dark-mode dashboard interface
+│   ├── styles.css              # Custom styling & layout animations
+│   └── app.js                  # Dynamic API client & live trace stream renderer
+├── tests/                       # Automated Test Suite (Pytest)
+│   ├── test_advise_integration.py # End-to-end decision advisor tests
+│   ├── test_api.py             # FastAPI REST endpoints test
+│   ├── test_completeness.py    # Signal completeness badge tests
+│   └── test_overrides.py       # Safety circuit-breaker override tests
+├── document_parser.py           # Master multi-format ingestion (PDF, DOCX, XLSX, CSV, IMG)
+├── server.py                    # Non-blocking FastAPI backend server
+├── infer.py                     # CLI runtime, FinBERT single-pass ONNX & ERP advisor
+├── train.py                     # Custom PyTorch class-weighted fine-tuning script
+├── eval.py                      # Comprehensive classification report & metrics
+├── export_onnx.py               # Freezes PyTorch weights into optimized ONNX graph
+├── test_ocr_pipeline.py         # Verification test suite for degraded scan OCR
+└── requirements.txt             # Core dependencies (Torch, ONNX, OpenCV, RapidOCR)
 ```
 
 ---
 
 ## 📄 License
-
-This project is licensed under the **MIT License** — free for academic, open-source, and commercial deployment.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

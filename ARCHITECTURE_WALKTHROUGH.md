@@ -19,8 +19,8 @@ flowchart TD
     A["📄 Upload Document\n(PDF, Scan, Excel, CSV, DOCX, Image)"] --> S1["Stage 1: Document Intake & Smart OCR\n(PyMuPDF / OpenCV Restorer / RapidOCR)"]
     S1 --> S2["Stage 2: Vision & Table Sentencification\n(Converts raw numbers & charts into clear English)"]
     S2 --> S3["Stage 3: Forensic NLP & Deception Audits\n(Aspects, Hedging Detector, Discourse, Altman Z)"]
-    S3 --> S4["Stage 4: FinBERT Core AI Brain\n(Local ONNX Neural Engine - Sub-10ms)"]
-    S4 --> S5["Stage 5: ERP Policy Advisor & Decisions\n(Distress Score 0-100 & Action Directives)"]
+    S3 --> S4["Stage 4: FinBERT Core AI Brain\n(Single-Pass Local ONNX Neural Engine - Sub-10ms)"]
+    S4 --> S5["Stage 5: 5-Lane Fusion & ERP Policy Decisions\n(Distress Score 0-100 & Action Directives)"]
 
     style A fill:#313244,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4
     style S1 fill:#1e1e2e,stroke:#a6adc8,stroke-width:2px,color:#cdd6f4
@@ -106,13 +106,13 @@ flowchart TD
 | Audit Module | What It Looks For | Real-World Example |
 | :--- | :--- | :--- |
 | **1. ABSA Engine** *(Aspect-Based Sentiment)* | Breaks the company into 5 pillars: **Top-Line Growth**, **Cost & Profitability**, **Liquidity & Cash**, **Debt Solvency**, and **Audit Risk**. | A company might have great Revenue (Positive), but collapsing Cash Flow (Critical Risk). ABSA flags them separately. |
-| **2. Linguistic Hedging** *(Deception Tracker)* | Flags corporate smoke-screens, modal verbs (*"might"*, *"could"*), and passive voice (*"mistakes were made"*). | Calculates **Epistemic Uncertainty (0–100)** and **Gunning-Fog Reading Grade** to catch intentional obfuscation. |
+| **2. Linguistic Hedging** *(Deception Tracker)* | Flags corporate smoke-screens, modal verbs (*"might"*, *"could"*), and passive voice (*"mistakes were made"*). | Calculates **Epistemic Uncertainty (0–100)** and **Gunning-Fog Reading Grade** using memoized syllable caching to catch intentional obfuscation in <3ms. |
 | **3. Rhetorical Discourse (RST)** | Identifies the *Core Truth (Nucleus)* vs the *Excuse/Fluff (Satellite)* using concessive grammar (*"Although..."*, *"Despite..."*). | Sentence: *"Although sales rose 10%, cash flow cratered."*<br>👉 Identifies *Cash Flow Cratered* as the primary truth. |
 | **4. Forensic Accounting** | Applies Nobel-prize winning statistical accounting formulas to balance-sheet data. | **Altman Z-Score:** Predicts bankruptcy probability.<br>**Beneish M-Score:** Flags fraudulent earnings manipulation.<br>**Piotroski F-Score:** Scores financial strength (0 to 9). |
 
 ---
 
-### ⚡ Stage 4: FinBERT Core AI Brain (Inference)
+### ⚡ Stage 4: FinBERT Core AI Brain (Single-Pass Inference)
 **Files involved:** [`infer.py`](file:///d:/Virdixt/infer.py), [`models/finbert.onnx`](file:///d:/Virdixt/models/finbert.onnx)
 
 #### 🎯 Goal
@@ -120,65 +120,27 @@ Execute fast, calibrated neural classification on the processed text in under **
 
 #### 💡 How It Works
 1. **Token Pruning:** Trims unnecessary filler words and focuses attention on anchor accounting tokens.
-2. **ONNX Graph Execution:** Loads the fine-tuned FinBERT model graph directly into memory once.
-3. **Temperature Calibration:** Uses temperature scaling ($T=1.25$) on raw neural outputs so probabilities reflect real-world statistical confidence rather than overconfident guesses.
-4. **Laya System-1 Continuous Distress Index:** Converts discrete labels (`Positive`, `Neutral`, `Negative`) into a smooth **Distress Score from 0.0 (Peak Financial Health) to 100.0 (Imminent Insolvency)**.
+2. **Single-Pass Neural Execution:** Runs the ONNX forward pass **once** (`get_all_predictions`) and derives discrete classification, continuous distress score, and NOUL propositions in-memory, eliminating redundant passes.
+3. **Temperature Calibration:** Uses temperature scaling ($T=1.25$) on raw neural outputs so probabilities reflect real-world statistical confidence.
+4. **Laya System-1 Continuous Distress Index:** Converts discrete labels (`Positive`, `Neutral`, `Negative`) into a smooth **Distress Score from 0.0 (Peak Solvency) to 100.0 (Imminent Insolvency)**.
 
 ---
 
-### 🛡️ Stage 5: ERP Policy Advisor & Hierarchical Deterministic Overrides
-**Files involved:** [`infer.py`](file:///d:/Virdixt/infer.py)
+### 🛡️ Stage 5: 5-Lane Composite Fusion, ERP Policy Advisor & Web UI
+**Files involved:** [`nlp/fusion.py`](file:///d:/Virdixt/nlp/fusion.py), [`server.py`](file:///d:/Virdixt/server.py), [`static/index.html`](file:///d:/Virdixt/static/index.html)
 
 #### 🎯 Goal
-Translate the neural analysis and multi-lane forensic indicators into concrete, enforceable business actions for ERP and procurement systems (SAP, Oracle, NetSuite).
+Synthesize all 5 intelligence lanes into a single institutional rating, enforce hard safety circuit-breakers, and render the results on the real-time Web Dashboard.
 
 #### 💡 How It Works
-Virdixt uses a **Hierarchical Baseline + Circuit Breaker Veto** architecture:
-
-```mermaid
-flowchart TD
-    BERT["FinBERT Neural Distress Score & Negative Probabilities"] --> BASE{"Baseline RiskGrade\n(CRITICAL / WARNING / MONITOR / MINIMAL)"}
-    
-    BASE --> VETO{"Deterministic Veto Layer (apply_overrides)"}
-    FORENSIC["Altman Z-Score in DISTRESS ZONE"] -->|Hard Veto| VETO
-    HEDGE["Linguistic Evasion = EXTREME_EVASION"] -->|Hard Veto| VETO
-    
-    VETO -->|Forces CRITICAL if Distress Zone| FINAL["Final RiskGrade"]
-    VETO -->|Forces at least WARNING if Evasion| FINAL
-    VETO -->|Otherwise keeps Baseline| FINAL
-    
-    FINAL --> MAP["Strict Policy Mapping (POLICY_TABLE)"]
-    MAP --> TIER["ERP Exposure Tier (TIER_1_SAFE to TIER_4_BLOCKED)"]
-    MAP --> ACT["Policy Action (FREEZE_PURCHASE_ORDERS / FLAG / PROCEED)"]
-    MAP --> RECS["Actionable Operational Directives"]
-    
-    DOC["Input Document & Signals"] --> COMP["Completeness Engine (evaluate_completeness)"]
-    COMP --> BADGE["Badge: FULL / PARTIAL / THIN"]
-
-    style BERT fill:#11111b,stroke:#89dceb,stroke-width:2px,color:#cdd6f4
-    style VETO fill:#313244,stroke:#f38ba8,stroke-width:2px,color:#cdd6f4
-    style FINAL fill:#1e1e2e,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4
-    style MAP fill:#181825,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4
-    style COMP fill:#181825,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4
-```
-
-1. **Baseline Assessment:**
-   - **CRITICAL:** `score_val > 75` or `neg_prob > 0.60`
-   - **WARNING:** `neg_prob > 0.35` or `score_val > 40`
-   - **MONITOR:** `score_val > 20`
-   - **MINIMAL:** Otherwise
-2. **Deterministic Veto Overrides (`apply_overrides`):**
-   - **Forensic Accounting Veto:** If Altman Z-Score is in the `"DISTRESS ZONE"`, it unconditionally forces the final grade to **CRITICAL** (adding `"Altman Z in distress zone"` to override reasons).
-   - **Hedging / Deception Veto:** If hedging analysis detects `"EXTREME_EVASION"`, it forces the grade up to at least **WARNING** (adding `"Extreme hedging language"`).
-3. **Strict ERP Policy Mapping (`POLICY_TABLE`):**
-   - 🚨 `CRITICAL` $\rightarrow$ `TIER_4_BLOCKED` $\rightarrow$ `FREEZE_PURCHASE_ORDERS` (Immediate freeze on uncommitted POs; require 100% upfront wire transfer or LC).
-   - ⚠️ `WARNING` $\rightarrow$ `TIER_3_WARNING` $\rightarrow$ `FLAG_FOR_REVIEW` (Cap single transaction exposure to $25,000; verify 90-day cash burn).
-   - 🔍 `MONITOR` $\rightarrow$ `TIER_2_MONITOR` $\rightarrow$ `PROCEED_NORMAL` (Standard monitoring on quarterly 10-Q).
-   - ✅ `MINIMAL` $\rightarrow$ `TIER_1_SAFE` $\rightarrow$ `PROCEED_NORMAL` (Healthy balance sheet; approved for standard commercial credit terms).
-4. **Data Completeness & Confidence Engine (`evaluate_completeness`):**
-   - Cross-checks document length, missing financial parameters, and aspect coverage to assign institutional confidence badges (`FULL`, `PARTIAL`, `THIN`).
-5. **Dollar Priority Index:**
-   - Evaluates risk-adjusted financial exposure: $\text{Priority} = (\text{Score} / 100) \times \text{Exposure Value}$ for instant portfolio triage.
+1. **5-Lane Weight Normalization (`FusionRuleEngine`):**
+   - Automatically shifts weights between `BASE_WEIGHTS` (when balance sheets are available) and `TEXT_ONLY_WEIGHTS` (for narrative disclosures).
+2. **Deterministic Safety Overrides (`apply_overrides`):**
+   - If Altman Z is in the *Distress Zone*, unconditionally force the final rating to `CRITICAL` / `FREEZE_PURCHASE_ORDERS`.
+   - If executive hedging is classified as *Extreme Evasion*, escalate rating to `WARNING`.
+3. **Non-Blocking Web Dashboard:**
+   - Powered by FastAPI with threadpool worker offloading (`run_in_threadpool`) and isolated temporary files.
+   - Displays real-time telemetry logs, interactive exposure sliders, and visual aspect breakdown charts.
 
 ---
 
@@ -217,37 +179,35 @@ flowchart LR
 | [`vision/image_enhancer.py`](file:///d:/Virdixt/vision/image_enhancer.py) | OpenCV image restoration: CLAHE contrast, bilateral denoising, deskewing, and unsharp stroke sharpening. |
 | [`vision/ocr_engine.py`](file:///d:/Virdixt/vision/ocr_engine.py) | RapidOCR ONNX engine (<150MB RAM) with geometric bounding-box layout sorting for tables. |
 | [`vision/delta_calculator.py`](file:///d:/Virdixt/vision/delta_calculator.py) | Deterministic math engine that translates tabular numbers and charts into natural English sentences. |
-| [`nlp/absa_engine.py`](file:///d:/Virdixt/nlp/absa_engine.py) | Aspect-Based Sentiment Analysis scoring Top-Line, Profitability, Liquidity, Solvency, and Audit risks. |
-| [`nlp/linguistic_hedging.py`](file:///d:/Virdixt/nlp/linguistic_hedging.py) | Deception detection: Epistemic uncertainty index, passive voice evasion, and Gunning-Fog readability grade. |
+| [`nlp/fusion.py`](file:///d:/Virdixt/nlp/fusion.py) | 5-Lane Composite Fusion engine combining sentiment, ABSA, forensics, discourse, and hedging into one score. |
+| [`nlp/absa_engine.py`](file:///d:/Virdixt/nlp/absa_engine.py) | Aspect-Based Sentiment Analysis scoring Top-Line, Profitability, Liquidity, Solvency, and Audit risks in a single pass. |
+| [`nlp/linguistic_hedging.py`](file:///d:/Virdixt/nlp/linguistic_hedging.py) | Deception detection: Epistemic uncertainty, passive evasion, and LRU-cached Gunning-Fog readability grade. |
 | [`nlp/discourse_parser.py`](file:///d:/Virdixt/nlp/discourse_parser.py) | Rhetorical Structure Theory (RST) parsing separating primary facts (nuclei) from excuses (satellites). |
 | [`nlp/forensic_accounting.py`](file:///d:/Virdixt/nlp/forensic_accounting.py) | Quantitative forensic math: Altman Z-Score, Beneish M-Score, and Piotroski F-Score. |
-| [`infer.py`](file:///d:/Virdixt/infer.py) | Command-line runtime integrating all modules, ONNX inference, deterministic overrides, and ERP audit reports. |
-| [`tests/test_advise_integration.py`](file:///d:/Virdixt/tests/test_advise_integration.py) | End-to-end integration tests validating financial distress escalations and policy tables. |
-| [`tests/test_completeness.py`](file:///d:/Virdixt/tests/test_completeness.py) | Unit tests verifying signal availability checks, pruning neutralities, and serialization. |
-| [`tests/test_overrides.py`](file:///d:/Virdixt/tests/test_overrides.py) | Deterministic test suite verifying forensic accounting and hedging override rules. |
+| [`server.py`](file:///d:/Virdixt/server.py) | Non-blocking FastAPI backend server with threadpool execution and live telemetry streaming. |
+| [`static/index.html`](file:///d:/Virdixt/static/index.html) | Interactive Web Audit Dashboard & Telemetry UI. |
+| [`infer.py`](file:///d:/Virdixt/infer.py) | Command-line runtime integrating all modules, executing single-pass ONNX inference, and producing ERP audit tables. |
 | [`test_ocr_pipeline.py`](file:///d:/Virdixt/test_ocr_pipeline.py) | Verification test suite for degraded scan restoration, ONNX OCR, and PDF fallback. |
-| [`requirements.txt`](file:///d:/Virdixt/requirements.txt) | Complete local dependencies (Torch, Transformers, ONNX Runtime, OpenCV, RapidOCR, PyMuPDF). |
+| [`requirements.txt`](file:///d:/Virdixt/requirements.txt) | Complete local dependencies (Torch, Transformers, ONNX Runtime, OpenCV, RapidOCR, PyMuPDF, FastAPI). |
 
 ---
 
 ## 🚀 Quick Commands Cheatsheet
 
 ```bash
-# 1. Audit any document (PDF, Scanned Image, DOCX, Excel, CSV, TXT)
-python infer.py --file "sample_financials.pdf"
+# 1. Launch the Interactive Web Dashboard
+python server.py
+# -> Open http://localhost:8000 in your browser
 
-# 2. Audit with financial exposure tracking
-python infer.py --file "sample_financials.pdf" --exposure 500000
+# 2. Audit any document from terminal (PDF, Scanned Image, DOCX, Excel, CSV, TXT)
+python infer.py --file "data/sample_reports/corporate_filing.xlsx"
 
 # 3. Audit raw corporate text directly
 python infer.py --text "Although revenue rose by 14%, cash flow turned deeply negative."
 
-# 4. Run the full pytest verification test suite
-pytest -v
+# 4. Run Pytest Suite (14 Tests)
+python -m pytest tests/
 
 # 5. Run OCR & Image Restoration Verification Test Suite
 python test_ocr_pipeline.py
-
-# 6. Re-evaluate Model Accuracy & Recall
-python eval.py
 ```

@@ -9,20 +9,19 @@
   <!-- Design System -->
   <link rel="stylesheet" href="/styles.css" />
 
-  <!-- Alpine.js (CDN, ~15KB gzipped — no npm, no build) -->
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <!-- Alpine.js (Vendored) -->
+  <script defer src="/alpine.min.js"></script>
 </head>
 <body x-data="virdixt" x-init="init()">
 
   <!-- ══════════════ TOP NAVIGATION ══════════════ -->
   <header class="topbar">
     <div class="topbar-logo">
-      <!-- Gold hex icon -->
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
         <path d="M11 1L20.5 6.5V15.5L11 21L1.5 15.5V6.5L11 1Z"
-              stroke="#E5C158" stroke-width="1.5" fill="none"/>
+              stroke="var(--system-blue)" stroke-width="1.75" fill="none"/>
         <path d="M11 5L17 8.5V15.5L11 19L5 15.5V8.5L11 5Z"
-              fill="rgba(229,193,88,0.12)" stroke="#E5C158" stroke-width="1"/>
+              fill="rgba(10,132,255,0.12)" stroke="var(--system-blue)" stroke-width="1.25"/>
       </svg>
       VIRDIXT
     </div>
@@ -31,14 +30,27 @@
 
     <div class="topbar-right">
       <button class="theme-toggle" @click="toggleTheme()" :aria-label="themeLabel" id="theme-toggle-btn">
-        <span x-text="themeIcon"></span>
+        <svg x-show="theme === 'dark'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg x-show="theme === 'light'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
         <span x-text="themeLabel"></span>
       </button>
     </div>
   </header>
 
   <!-- ══════════════ MAIN CONTENT ══════════════ -->
-  <main class="main-layout">
+  <main class="main-layout focused-layout">
 
     <!-- Page header -->
     <div class="page-header">
@@ -48,7 +60,11 @@
 
     <!-- Error banner -->
     <div class="error-banner" :class="{ visible: errorMsg }" role="alert" id="error-banner">
-      <span>⚠</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
       <span x-text="errorMsg"></span>
     </div>
 
@@ -69,7 +85,13 @@
                 role="tab"
                 id="tab-file"
                 aria-controls="tabpanel-file">
-          📄 Upload File
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="12" y1="18" x2="12" y2="12"></line>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+          </svg>
+          <span>Upload File</span>
         </button>
         <button class="tab-btn"
                 :class="{ active: activeTab === 'text' }"
@@ -77,7 +99,11 @@
                 role="tab"
                 id="tab-text"
                 aria-controls="tabpanel-text">
-          ✏️ Raw Text
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          <span>Raw Text</span>
         </button>
         <button class="tab-btn"
                 :class="{ active: activeTab === 'sample' }"
@@ -85,7 +111,12 @@
                 role="tab"
                 id="tab-sample"
                 aria-controls="tabpanel-sample">
-          🗂 Sample Reports
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          <span>Sample Reports</span>
         </button>
       </div>
 
@@ -101,7 +132,13 @@
              @dragleave="onDragLeave()"
              @drop="onDrop($event)"
              id="dropzone">
-          <div class="dropzone-icon">📁</div>
+          <div class="dropzone-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
           <div class="dropzone-label">
             Drag &amp; drop your file here, or
             <strong onclick="document.getElementById('file-input').click()">browse</strong>
@@ -128,7 +165,12 @@
             &nbsp;—&nbsp;
             <span x-text="fileSizeLabel" style="color:var(--text-muted)"></span>
           </span>
-          <button class="remove-file" @click="removeFile()" aria-label="Remove selected file">✕</button>
+          <button class="remove-file" @click="removeFile()" aria-label="Remove selected file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -202,7 +244,9 @@
           <span class="spinner"></span>
         </template>
         <template x-if="!analyzing">
-          <span>⚡</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
         </template>
         <span x-text="analyzing ? 'Running Forensic Engine…' : 'Run Forensic Analysis'"></span>
       </button>
@@ -232,299 +276,6 @@
       </div>
     </div>
 
-    <!-- ══════════════ PHASE 3: AUDIT RESULT DASHBOARD ══════════════ -->
-    <div class="result-section" id="result-section" x-show="result" x-cloak>
-
-      <!-- ── Verdict Banner ── -->
-      <div class="verdict-banner" :class="verdictGradeClass" id="verdict-banner">
-        <div class="verdict-left">
-          <span class="verdict-label">Institutional Risk Verdict</span>
-          <div class="verdict-grade" :class="verdictGradeClass" x-text="result?.verdict?.rating ?? '—'"></div>
-          <div class="verdict-interpretation" x-text="result?.verdict?.interpretation ?? ''"></div>
-          <!-- Override alert -->
-          <div class="verdict-override"
-               x-show="result?.override_reasons?.length"
-               x-text="'⚠ Escalated: ' + (result?.override_reasons ?? []).join(', ')">
-          </div>
-        </div>
-        <div class="verdict-right">
-          <div class="verdict-score-row">
-            <span class="verdict-score-num" x-text="distressScore"></span>
-            <span class="verdict-score-label">/ 100 Distress</span>
-          </div>
-          <div class="verdict-meta" x-text="'Score: ' + (result?.verdict?.score ?? '—')"></div>
-          <!-- Priority Index -->
-          <div class="priority-badge" x-show="priorityFormatted" x-cloak>
-            ⚡ <span x-text="priorityFormatted"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Policy Action Row ── -->
-      <div class="panel" id="policy-panel">
-        <div class="panel-header">
-          <div class="panel-title"><span class="dot"></span>ERP Policy Directives</div>
-        </div>
-        <div class="action-row">
-          <span class="action-label">Exposure Tier</span>
-          <span class="action-value" :class="actionGradeClass"
-                x-text="result?.verdict?.interpretation ?? '—'"></span>
-        </div>
-        <div class="action-row">
-          <span class="action-label">Policy Action</span>
-          <span class="action-value" :class="actionGradeClass"
-                x-text="result?.action_flag ?? '—'"></span>
-        </div>
-        <div class="rec-list" id="rec-list">
-          <template x-for="(rec, i) in (result?.action_recommendations ?? [])" :key="i">
-            <div class="rec-item">
-              <span class="rec-bullet" x-text="i + 1"></span>
-              <span x-text="rec"></span>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- ── Two-column Lane Grid ── -->
-      <div class="lane-grid">
-
-        <!-- Lane 1: Quantitative Forensic Metrics -->
-        <div class="panel" id="quant-panel">
-          <div class="panel-header">
-            <div class="panel-title"><span class="dot"></span>Quantitative Forensic Benchmarks</div>
-          </div>
-          <template x-if="result?.quantitative && Object.keys(result.quantitative).length > 0">
-            <table class="quant-table" id="quant-table">
-              <thead>
-                <tr>
-                  <th>Model</th>
-                  <th>Score</th>
-                  <th>Interpretation</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- Altman Z -->
-                <tr x-show="result?.quantitative?.altman_z">
-                  <td>
-                    Altman Z-Score
-                    <div class="quant-formula" x-text="result?.quantitative?.altman_z?.formula ?? ''"></div>
-                  </td>
-                  <td>
-                    <span class="quant-score" x-text="fmtScore(result?.quantitative?.altman_z?.score)"></span>
-                    <div class="quant-na-hint" x-show="result?.quantitative?.altman_z?.score == null">
-                      Requires Total Assets in the document — not detected in this report.
-                    </div>
-                  </td>
-                  <td>
-                    <span class="status-chip"
-                          :class="chipClass(result?.quantitative?.altman_z?.status)"
-                          x-text="result?.quantitative?.altman_z?.status ?? '—'"></span>
-                  </td>
-                </tr>
-                <!-- Beneish M -->
-                <tr x-show="result?.quantitative?.beneish_m">
-                  <td>
-                    Beneish M-Score
-                    <div class="quant-formula"
-                         x-text="'Threshold: ' + (result?.quantitative?.beneish_m?.threshold ?? '−1.78')"></div>
-                  </td>
-                  <td>
-                    <span class="quant-score" x-text="fmtScore(result?.quantitative?.beneish_m?.score)"></span>
-                    <div class="quant-na-hint" x-show="result?.quantitative?.beneish_m?.score == null">
-                      Needs Revenue, Net Income &amp; Total Debt — one or more were absent in this report.
-                    </div>
-                  </td>
-                  <td>
-                    <span class="status-chip"
-                          :class="chipClass(result?.quantitative?.beneish_m?.status)"
-                          x-text="result?.quantitative?.beneish_m?.status ?? '—'"></span>
-                  </td>
-                </tr>
-                <!-- Benford Law -->
-                <tr x-show="result?.quantitative?.benford_law != null">
-                  <td>Benford's Law</td>
-                  <td><span class="quant-score">—</span></td>
-                  <td>
-                    <span class="status-chip"
-                          :class="result?.quantitative?.benford_law?.anomaly_detected ? 'chip-danger' : 'chip-success'"
-                          x-text="result?.quantitative?.benford_law?.anomaly_detected ? 'Anomaly' : 'Normal'"></span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </template>
-          <template x-if="!result?.quantitative || Object.keys(result.quantitative).length === 0">
-            <div class="masking-empty">
-              No structured financial figures (e.g. Total Assets, Revenue, Debt) were detected in this document.
-              Forensic scores (Altman Z, Beneish M, Piotroski F) require explicit numerical balance-sheet data —
-              they will appear automatically once a report containing those figures is analysed.
-            </div>
-          </template>
-        </div>
-
-        <!-- Lane 2: NLP & Sentiment Vector -->
-        <div class="panel" id="nlp-panel">
-          <div class="panel-header">
-            <div class="panel-title"><span class="dot" style="background:var(--status-info);box-shadow:0 0 6px var(--status-info);"></span>NLP & Tone Classification</div>
-          </div>
-          <div class="sentiment-grid">
-            <div class="sentiment-row">
-              <span class="sentiment-key">Sentiment Tone</span>
-              <span class="sentiment-val verdict-grade" :class="toneClass"
-                    x-text="result?.nlp_sentiment?.tone ?? '—'"></span>
-            </div>
-            <div class="sentiment-row">
-              <span class="sentiment-key">Composite Distress Score</span>
-              <span class="sentiment-val" x-text="distressScore + ' / 100'"></span>
-            </div>
-            <div class="sentiment-row">
-              <span class="sentiment-key">Completeness Badge</span>
-              <span class="sentiment-val" x-text="result?.completeness ?? '—'"></span>
-            </div>
-          </div>
-          <!-- Key aspect triggers -->
-          <div class="trigger-chips" x-show="(result?.nlp_sentiment?.key_triggers ?? []).length > 0" id="trigger-chips">
-            <template x-for="t in (result?.nlp_sentiment?.key_triggers ?? [])" :key="t">
-              <span class="trigger-chip" x-text="t"></span>
-            </template>
-          </div>
-        </div>
-
-      </div><!-- end lane-grid -->
-
-      <!-- Lane 3: Rhetorical Masking Callouts (full width) -->
-      <div class="panel" id="masking-panel">
-        <div class="panel-header">
-          <div class="panel-title">
-            <span class="dot" style="background:var(--status-warning);box-shadow:0 0 6px var(--status-warning);"></span>
-            Rhetorical Masking & Discourse Analysis
-          </div>
-          <span style="font-size:11px;color:var(--text-muted);"
-                x-text="(result?.rhetorical_masking?.callouts ?? []).length + ' callout(s) detected'"></span>
-        </div>
-        <template x-if="(result?.rhetorical_masking?.callouts ?? []).length === 0">
-          <div class="masking-empty">✓ No rhetorical masking patterns detected in this document.</div>
-        </template>
-        <template x-for="(c, i) in (result?.rhetorical_masking?.callouts ?? [])" :key="i">
-          <div class="callout-item" :id="'callout-' + i">
-            <div class="callout-score">
-              ⚠ Masking Score: <span x-text="(c.masking_score * 100).toFixed(0) + '%'"></span>
-            </div>
-            <div class="callout-sentence" x-text="c.sentence"></div>
-            <div class="callout-explanation" x-text="c.explanation"></div>
-          </div>
-        </template>
-      </div>
-
-      <!-- ══ Lane 4: What-If Exposure Simulator ══ -->
-      <div class="panel" id="simulator-panel">
-        <div class="panel-header">
-          <div class="panel-title">
-            <span class="dot" style="background:var(--accent-gold);box-shadow:0 0 6px var(--accent-gold);"></span>
-            Live What-If Exposure Simulator
-          </div>
-          <div class="sim-status" id="sim-status">
-            <template x-if="simulating">
-              <span class="sim-spinner"></span>
-            </template>
-            <span x-text="simulating ? 'Recalculating…' : (simResult ? 'Last updated @ ' + simLastTs : 'Move slider to simulate')"></span>
-          </div>
-        </div>
-
-        <div class="sim-body">
-
-          <!-- ── Exposure slider (always visible) ─────────── -->
-          <div>
-            <div class="sim-input-row" style="margin-bottom:10px;">
-              <span class="sim-input-label">Exposure Value</span>
-              <span class="sim-exposure-display" x-text="simExposureFmt"></span>
-            </div>
-            <input class="sim-slider"
-                   type="range"
-                   id="sim-slider"
-                   min="0"
-                   max="100000000"
-                   step="500000"
-                   x-model.number="simExposure"
-                   @input="onSimSlider()"
-                   aria-label="Exposure simulator slider" />
-            <div class="sim-slider-ticks">
-              <span>$0</span><span>$25M</span><span>$50M</span><span>$75M</span><span>$100M+</span>
-            </div>
-          </div>
-
-          <!-- ── Multi-variable financial fact sliders ─────── -->
-          <template x-if="simHasFinancialFacts">
-            <div id="sim-fact-sliders">
-              <div style="font-size:11px;color:var(--text-muted);margin:14px 0 10px;letter-spacing:.06em;text-transform:uppercase;">
-                Nudge Financial Variables
-              </div>
-              <template x-for="(meta, i) in simFactsMeta" :key="meta.key">
-                <div class="sim-fact-row" :id="'sim-fact-' + i">
-                  <div class="sim-input-row" style="margin-bottom:4px;">
-                    <span class="sim-input-label" x-text="meta.label"></span>
-                    <span class="sim-exposure-display" x-text="fmtMoney(simFacts[meta.key])"></span>
-                  </div>
-                  <input class="sim-slider sim-slider-sm"
-                         type="range"
-                         :min="meta.min"
-                         :max="meta.max"
-                         :step="meta.step"
-                         x-model.number="simFacts[meta.key]"
-                         @input="onSimInput()"
-                         :aria-label="'Slider for ' + meta.label" />
-                  <div class="sim-slider-ticks" style="font-size:10px;">
-                    <span x-text="fmtMoney(meta.min)"></span>
-                    <span x-text="fmtMoney(meta.value)"></span>
-                    <span x-text="fmtMoney(meta.max)"></span>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </template>
-
-          <!-- ── Metric cards ──────────────────────────────── -->
-          <div class="sim-metrics" id="sim-metrics" x-show="simResult || simulating">
-            <!-- Priority Index -->
-            <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-priority">
-              <span class="sim-metric-label">Priority Index</span>
-              <span class="sim-metric-value" x-text="simPriorityFmt"></span>
-              <span class="sim-delta" :class="simPriorityDeltaClass" x-text="simPriorityDelta" x-show="simPriorityDelta"></span>
-            </div>
-            <!-- Risk Grade -->
-            <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-grade">
-              <span class="sim-metric-label">Risk Grade</span>
-              <span class="sim-metric-value" :class="simGradeClass" x-text="simResult?.verdict?.rating ?? '—'"></span>
-              <span class="sim-delta" :class="simGradeChanged ? 'up' : 'same'"
-                    x-text="simGradeChanged ? '↕ Changed from ' + _simBaseRating : ''"
-                    x-show="simResult"></span>
-            </div>
-            <!-- Action Flag -->
-            <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-action">
-              <span class="sim-metric-label">Policy Action</span>
-              <span class="sim-metric-value" style="font-size:13px;word-break:break-word;"
-                    :class="simGradeClass"
-                    x-text="simResult?.action_flag ?? '—'"></span>
-            </div>
-            <!-- Altman Z (only when forensic data available) -->
-            <template x-if="simResult?.forensic_scores?.altman_z?.score != null">
-              <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-altman">
-                <span class="sim-metric-label">Altman Z-Score</span>
-                <span class="sim-metric-value" x-text="simAltmanFmt"></span>
-                <span class="status-chip" :class="simAltmanClass" x-text="simAltmanZone"
-                      style="font-size:10px;padding:2px 8px;margin-top:4px;"></span>
-              </div>
-            </template>
-          </div>
-
-          <!-- Override reason banner -->
-          <div x-show="simOverrideText" class="sim-override-note" x-text="simOverrideText"></div>
-
-        </div>
-
-      </div>
-
-    </div><!-- end result-section -->
 
   </main>
 

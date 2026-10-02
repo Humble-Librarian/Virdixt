@@ -21,7 +21,7 @@
 
 ## 🚀 Key Capabilities
 
-* **🌐 Interactive Web Audit Dashboard & Telemetry UI:** Modern, dark-mode real-time visualizer with live ingestion trace logs, multi-lane explainability bars, quantitative audit metrics, and an interactive "What-If" exposure slider.
+* **🌐 Two-Page Web Audit Dashboard & Telemetry UI:** Modern split architecture (`index.html` for ingestion, `report.html` for visualization) with a collapsible navigation sidebar, live trace logs, multi-lane explainability bars, and an interactive "What-If" exposure slider.
 * **🔍 Zero-Tax OCR & OpenCV Optical Image Restoration:** Dual-path ingestion:
   - **Fast Vector Path (<5ms, 0 MB RAM):** Uses `PyMuPDF` (`fitz`) for clean digital PDFs.
   - **Degraded Scan Fallback:** Automatically detects scanned/blurry pages, applies **CLAHE contrast equalization, bilateral edge-preserving denoising, morphological deskewing, and unsharp masking**, then extracts structured text via lightweight **RapidOCR ONNX** (<150MB RAM).
@@ -40,7 +40,7 @@
   * **`Score`:** Continuous Financial Distress Index $[0.0, 100.0]$ ($0 = \text{Peak Solvency}, 100 = \text{Imminent Distress}$).
   * **`Noul`:** Calibrated probability propositions ($P(\text{Liquidity Distress})$, $P(\text{Covenant Breach})$, $P(\text{Growth Momentum})$).
 * **Automated ERP Policy Engine (`POLICY_TABLE`):** Strict deterministic mapping from risk grades to exposure tiers (`TIER_1_SAFE` to `TIER_4_BLOCKED`), policy action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`), and actionable operational directives.
-* **🔒 100% Air-Gapped / Zero-Cloud Leakage:** Operates entirely offline on standard CPU/GPU using native ONNX runtimes. Zero data ever leaves the local machine.
+* **🔒 100% Air-Gapped / Zero-Cloud Leakage:** Entire frontend (including `alpine.min.js`) is vendored locally. Operates entirely offline on standard CPU/GPU using native ONNX runtimes. Zero data ever leaves the local machine.
 
 ---
 
@@ -166,9 +166,11 @@ Virdixt/
 │   ├── chart_detector.py       # Visual chart bounding box detector
 │   └── pipeline.py             # End-to-end multimodal injection pipeline
 ├── static/                      # Interactive Web Audit Dashboard & Telemetry UI
-│   ├── index.html              # Modern dark-mode dashboard interface
-│   ├── styles.css              # Custom styling & layout animations
-│   └── app.js                  # Dynamic API client & live trace stream renderer
+│   ├── index.html              # Ingestion node & analysis trigger
+│   ├── report.html             # Multi-panel analysis dashboard with sidebar navigation
+│   ├── styles.css              # Custom styling, responsive layout, & active states
+│   ├── app.js                  # Reactive state bridge via sessionStorage & Alpine.js
+│   └── alpine.min.js           # Vendored dependency for 100% offline/air-gapped operation
 ├── tests/                       # Automated Test Suite (Pytest)
 │   ├── test_advise_integration.py # End-to-end decision advisor tests
 │   ├── test_api.py             # FastAPI REST endpoints test

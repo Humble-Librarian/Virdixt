@@ -4,153 +4,292 @@
    Source of truth: DESIGN.md
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-/* ── 1. CSS Variables: Obsidian Dark (default) ── */
+/* ── 1. Apple HIG Design Tokens: Dark Theme (Default) ── */
 :root {
-  --bg-base:              #0B0C10;
-  --bg-surface:           #12141A;
-  --bg-surface-elevated:  #1A1D24;
-  --border-subtle:        rgba(255, 255, 255, 0.08);
-  --border-highlight:     rgba(229, 193, 88, 0.30);
-  --text-primary:         #F3F4F6;
-  --text-secondary:       #9CA3AF;
-  --text-muted:           #6B7280;
-  --accent-gold:          #E5C158;
-  --accent-gold-hover:    #F3D372;
-  --accent-gold-glow:     rgba(229, 193, 88, 0.12);
-  --accent-gold-glow-h:   rgba(229, 193, 88, 0.22);
-  --status-danger:        #EF4444;
-  --status-warning:       #F59E0B;
-  --status-success:       #10B981;
-  --status-info:          #60A5FA;
-  --font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono:   'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  --radius-sm:   6px;
-  --radius-md:   10px;
-  --radius-lg:   16px;
-  --transition:  0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Semantic Colors (Apple Adaptive) */
+  --system-blue:                 #0A84FF;
+  --system-blue-hover:           #409CFF;
+  --system-green:                #30D158;
+  --system-red:                  #FF453A;
+  --system-orange:               #FF9F0A;
+  --system-yellow:               #FFD60A;
+
+  /* Grayscale & Text Roles */
+  --label:                       #FFFFFF;
+  --secondary-label:             rgba(235, 235, 245, 0.60);
+  --tertiary-label:              rgba(235, 235, 245, 0.30);
+  --quaternary-label:           rgba(235, 235, 245, 0.16);
+
+  /* Background Roles */
+  --system-background:           #000000;
+  --secondary-system-background: #1C1C1E;
+  --tertiary-system-background:  #2C2C2E;
+  --system-grouped-background:   #000000;
+  --secondary-system-grouped-background: #1C1C1E;
+
+  /* System Grays */
+  --system-gray:                 #8E8E93;
+  --system-gray2:                #636366;
+  --system-gray3:                #48484A;
+  --system-gray4:                #3A3A3C;
+  --system-gray5:                #2C2C2E;
+  --system-gray6:                #1C1C1E;
+
+  /* Separators & Materials (Liquid Glass) */
+  --separator:                   rgba(84, 84, 88, 0.60);
+  --separator-subtle:            rgba(255, 255, 255, 0.12);
+  --liquid-glass-bg:             rgba(28, 28, 30, 0.72);
+  --liquid-glass-border:         rgba(255, 255, 255, 0.12);
+  --liquid-glass-card:           rgba(28, 28, 30, 0.65);
+  --liquid-glass-shadow:         0 8px 32px rgba(0, 0, 0, 0.32);
+
+  /* Semantic Aliases */
+  --bg-base:                     var(--system-background);
+  --bg-surface:                  var(--secondary-system-background);
+  --bg-surface-elevated:         var(--tertiary-system-background);
+  --border-subtle:               var(--separator-subtle);
+  --border-highlight:            rgba(10, 132, 255, 0.40);
+  --text-primary:                var(--label);
+  --text-secondary:              var(--secondary-label);
+  --text-muted:                  var(--tertiary-label);
+
+  /* Single Primary Accent: systemBlue */
+  --primary:                     var(--system-blue);
+  --accent-gold:                 var(--system-blue);
+  --accent-gold-hover:           var(--system-blue-hover);
+  --accent-gold-glow:            rgba(10, 132, 255, 0.14);
+  --accent-gold-glow-h:          rgba(10, 132, 255, 0.24);
+
+  --status-danger:               var(--system-red);
+  --status-warning:              var(--system-orange);
+  --status-success:              var(--system-green);
+  --status-info:                 var(--system-blue);
+
+  /* Typography: System Fonts */
+  --font-sans:  'SF Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:  'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
+
+  /* Typography Scale */
+  --type-large-title: 34px;
+  --type-title1:      28px;
+  --type-title2:      22px;
+  --type-title3:      20px;
+  --type-headline:    17px;
+  --type-body:        17px;
+  --type-callout:     16px;
+  --type-subhead:     15px;
+  --type-footnote:    13px;
+  --type-caption1:    12px;
+  --type-caption2:    11px;
+
+  /* Layout Conventions: 8pt Grid & 44pt Minimum Tap Target */
+  --space-1:     4px;
+  --space-2:     8px;
+  --space-3:     12px;
+  --space-4:     16px;
+  --space-5:     20px;
+  --space-6:     24px;
+  --space-8:     32px;
+  --space-10:    40px;
+  --min-tap-target: 44px;
+
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   18px;
+  --radius-xl:   24px;
+  --transition:  0.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-/* ── 2. Platinum Light Theme ── */
-/* Gold enhanced: #C8890F → richer amber-gold for readability on white backgrounds */
+/* ── 2. Apple HIG Design Tokens: Light Theme ── */
 [data-theme="light"] {
-  --bg-base:              #F8F9FA;
-  --bg-surface:           #FFFFFF;
-  --bg-surface-elevated:  #F3F4F6;
-  --border-subtle:        rgba(0, 0, 0, 0.08);
-  --border-highlight:     rgba(200, 137, 15, 0.45);
-  --text-primary:         #111827;
-  --text-secondary:       #4B5563;
-  --text-muted:           #6B7280;
-  --accent-gold:          #C8890F;
-  --accent-gold-hover:    #A36D09;
-  --accent-gold-glow:     rgba(200, 137, 15, 0.10);
-  --accent-gold-glow-h:   rgba(200, 137, 15, 0.20);
-  --status-danger:        #DC2626;
-  --status-warning:       #D97706;
-  --status-success:       #059669;
-  --status-info:          #2563EB;
+  /* Semantic Colors (Apple Adaptive) */
+  --system-blue:                 #007AFF;
+  --system-blue-hover:           #0062CC;
+  --system-green:                #34C759;
+  --system-red:                  #FF3B30;
+  --system-orange:               #FF9500;
+  --system-yellow:               #FFCC00;
+
+  /* Grayscale & Text Roles */
+  --label:                       #000000;
+  --secondary-label:             #3C3C43;
+  --tertiary-label:              rgba(60, 60, 67, 0.45);
+  --quaternary-label:           rgba(60, 60, 67, 0.18);
+
+  /* Background Roles */
+  --system-background:           #FFFFFF;
+  --secondary-system-background: #F2F2F7;
+  --tertiary-system-background:  #FFFFFF;
+  --system-grouped-background:   #F2F2F7;
+  --secondary-system-grouped-background: #FFFFFF;
+
+  /* System Grays */
+  --system-gray:                 #8E8E93;
+  --system-gray2:                #AEAEB2;
+  --system-gray3:                #C7C7CC;
+  --system-gray4:                #D1D1D6;
+  --system-gray5:                #E5E5EA;
+  --system-gray6:                #F2F2F7;
+
+  /* Separators & Materials (Liquid Glass) */
+  --separator:                   rgba(60, 60, 67, 0.29);
+  --separator-subtle:            rgba(0, 0, 0, 0.08);
+  --liquid-glass-bg:             rgba(255, 255, 255, 0.82);
+  --liquid-glass-border:         rgba(0, 0, 0, 0.08);
+  --liquid-glass-card:           rgba(255, 255, 255, 0.78);
+  --liquid-glass-shadow:         0 8px 30px rgba(0, 0, 0, 0.06);
+
+  /* Semantic Aliases */
+  --bg-base:                     var(--system-grouped-background);
+  --bg-surface:                  var(--secondary-system-grouped-background);
+  --bg-surface-elevated:         var(--tertiary-system-background);
+  --border-subtle:               var(--separator-subtle);
+  --border-highlight:            rgba(0, 122, 255, 0.40);
+  --text-primary:                var(--label);
+  --text-secondary:              var(--secondary-label);
+  --text-muted:                  var(--tertiary-label);
+
+  /* Single Primary Accent: systemBlue */
+  --primary:                     var(--system-blue);
+  --accent-gold:                 var(--system-blue);
+  --accent-gold-hover:           var(--system-blue-hover);
+  --accent-gold-glow:            rgba(0, 122, 255, 0.08);
+  --accent-gold-glow-h:          rgba(0, 122, 255, 0.16);
+
+  --status-danger:               var(--system-red);
+  --status-warning:              var(--system-orange);
+  --status-success:              var(--system-green);
+  --status-info:                 var(--system-blue);
 }
 
-/* ── 3. Reset & Base ── */
+/* ── 3. Reset & Base (17pt body is legibility floor) ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 14px; scroll-behavior: smooth; }
+html {
+  font-size: 17px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
 
 body {
   font-family: var(--font-sans);
+  font-size: var(--type-body);
   background: var(--bg-base);
   color: var(--text-primary);
   min-height: 100vh;
-  line-height: 1.6;
+  line-height: 1.47;
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   transition: background var(--transition), color var(--transition);
 }
 
-/* ── 4. Top Navigation Bar ── */
+/* ── 4. Top Navigation Bar: Liquid Glass Layer ── */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  padding: 0 24px;
   height: 56px;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
+  background: var(--liquid-glass-bg);
+  border-bottom: 1px solid var(--liquid-glass-border);
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .topbar-logo {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 16px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-hover));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
 }
 
 .topbar-logo svg { flex-shrink: 0; }
 
 .topbar-center {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: -0.01em;
 }
 
 .topbar-right { display: flex; align-items: center; gap: 12px; }
 
 .theme-toggle {
-  background: var(--bg-surface-elevated);
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  padding: 4px 12px;
+  border-radius: 22px;
+  min-height: var(--min-tap-target);
+  padding: 0 16px;
   cursor: pointer;
   font-size: 13px;
-  color: var(--text-secondary);
-  display: flex; align-items: center; gap: 6px;
-  transition: border-color var(--transition), color var(--transition);
+  font-weight: 500;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: border-color var(--transition), background var(--transition);
 }
-.theme-toggle:hover { border-color: var(--border-highlight); color: var(--accent-gold); }
+.theme-toggle:hover {
+  border-color: var(--border-highlight);
+  background: var(--bg-surface-elevated);
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--min-tap-target);
+  min-height: var(--min-tap-target);
+  border-radius: var(--radius-sm);
+  color: var(--system-blue);
+  text-decoration: none;
+  transition: background var(--transition);
+}
+.back-btn:hover {
+  background: var(--accent-gold-glow);
+}
 
 /* ── 5. Main Layout ── */
 .main-layout {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 28px 80px;
+  padding: 32px 24px 80px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 24px;
 }
 
 /* ── 6. Page Header ── */
 .page-header { padding-bottom: 4px; }
 .page-header h1 {
-  font-size: 24px;
+  font-size: var(--type-large-title);
   font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 .page-header p {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--text-muted);
+  margin-top: 6px;
+  font-size: var(--type-subhead);
+  color: var(--text-secondary);
+  line-height: 1.45;
 }
 
-/* ── 7. Panel Base ── */
+/* ── 7. Panel Base (Translucent Liquid Glass Layer) ── */
 .panel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  background: var(--liquid-glass-card);
+  border: 1px solid var(--liquid-glass-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--liquid-glass-shadow);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   overflow: hidden;
 }
 
@@ -158,88 +297,98 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 22px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .panel-title {
-  font-size: 12px;
+  font-size: var(--type-footnote);
   font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
   color: var(--text-secondary);
   display: flex; align-items: center; gap: 8px;
 }
 .panel-title .dot {
-  width: 6px; height: 6px;
+  width: 8px; height: 8px;
   border-radius: 50%;
-  background: var(--accent-gold);
-  box-shadow: 0 0 6px var(--accent-gold);
+  background: var(--system-blue);
+  box-shadow: 0 0 6px var(--accent-gold-glow-h);
 }
 
-/* ── 8. Input Tabs ── */
+/* ── 8. Input Tabs (Segmented Navigation) ── */
 .input-tabs {
   display: flex;
   gap: 0;
   border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
 }
 
 .tab-btn {
   flex: 1;
-  padding: 13px 16px;
+  min-height: var(--min-tap-target);
+  padding: 10px 16px;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: var(--type-subhead);
   font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   transition: color var(--transition), border-color var(--transition), background var(--transition);
 }
-.tab-btn:hover { color: var(--text-secondary); background: var(--accent-gold-glow); }
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--accent-gold-glow);
+}
 .tab-btn.active {
-  color: var(--accent-gold);
-  border-bottom-color: var(--accent-gold);
+  color: var(--system-blue);
+  font-weight: 600;
+  border-bottom-color: var(--system-blue);
   background: var(--accent-gold-glow);
 }
 
 /* ── 9. Tab Panels ── */
-.tab-content { display: none; padding: 22px; }
+.tab-content { display: none; padding: 20px; }
 .tab-content.active { display: block; }
 
 /* ── 10. Drag & Drop Zone ── */
 .dropzone {
   border: 1.5px dashed var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 40px 24px;
+  padding: 36px 20px;
   text-align: center;
   cursor: pointer;
+  background: var(--bg-surface-elevated);
   transition: border-color var(--transition), background var(--transition);
   position: relative;
 }
 .dropzone:hover, .dropzone.drag-over {
-  border-color: var(--accent-gold);
+  border-color: var(--system-blue);
   background: var(--accent-gold-glow);
 }
 .dropzone-icon {
-  font-size: 32px;
-  margin-bottom: 10px;
-  opacity: 0.5;
+  margin-bottom: 12px;
+  color: var(--system-blue);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 .dropzone-label {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
+  font-size: var(--type-subhead);
+  color: var(--text-primary);
+  margin-bottom: 4px;
 }
-.dropzone-label strong { color: var(--accent-gold); cursor: pointer; }
-.dropzone-label strong:hover { color: var(--accent-gold-hover); }
+.dropzone-label strong { color: var(--system-blue); cursor: pointer; }
+.dropzone-label strong:hover { text-decoration: underline; }
 .dropzone-hint {
-  font-size: 11px;
+  font-size: var(--type-footnote);
   color: var(--text-muted);
-  letter-spacing: 0.03em;
 }
 .dropzone input[type="file"] {
   position: absolute; inset: 0; opacity: 0; cursor: pointer;
@@ -247,18 +396,30 @@ body {
 .file-selected {
   margin-top: 12px;
   padding: 8px 14px;
+  min-height: var(--min-tap-target);
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: var(--type-footnote);
   color: var(--text-secondary);
   font-family: var(--font-mono);
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
 .file-selected .remove-file {
-  cursor: pointer; color: var(--status-danger);
-  font-size: 14px; font-weight: 700; line-height: 1;
-  background: none; border: none;
+  cursor: pointer;
+  color: var(--system-red);
+  min-width: var(--min-tap-target);
+  min-height: var(--min-tap-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+}
+.file-selected .remove-file:hover {
+  background: rgba(255, 59, 48, 0.12);
 }
 
 /* ── 11. Text Area ── */
@@ -270,7 +431,7 @@ body {
   border-radius: var(--radius-md);
   padding: 14px 16px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--type-subhead);
   color: var(--text-primary);
   resize: vertical;
   outline: none;
@@ -283,49 +444,53 @@ body {
 .sample-selector {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .sample-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  min-height: 50px;
+  padding: 10px 16px;
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: border-color var(--transition), background var(--transition);
 }
-.sample-item:hover { border-color: var(--border-highlight); background: var(--accent-gold-glow); }
-.sample-item.selected { border-color: var(--accent-gold); background: var(--accent-gold-glow); }
+.sample-item:hover {
+  border-color: var(--border-highlight);
+  background: var(--accent-gold-glow);
+}
+.sample-item.selected {
+  border-color: var(--system-blue);
+  background: var(--accent-gold-glow);
+}
 
 .sample-item-info { display: flex; flex-direction: column; gap: 2px; }
 .sample-item-name {
-  font-size: 13px;
+  font-size: var(--type-subhead);
   font-weight: 500;
   color: var(--text-primary);
   font-family: var(--font-mono);
 }
 .sample-item-meta {
-  font-size: 11px;
+  font-size: var(--type-caption1);
   color: var(--text-muted);
-  letter-spacing: 0.03em;
 }
 .sample-item-badge {
-  font-size: 10px;
+  font-size: var(--type-caption1);
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
   background: var(--bg-surface);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
 }
 .sample-item.selected .sample-item-badge {
-  background: var(--accent-gold-glow);
-  color: var(--accent-gold);
-  border-color: var(--border-highlight);
+  background: var(--system-blue);
+  color: #FFFFFF;
+  border-color: var(--system-blue);
 }
 
 /* ── 13. Exposure Row ── */
@@ -333,77 +498,80 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 22px;
+  padding: 16px 20px;
   border-top: 1px solid var(--border-subtle);
   flex-wrap: wrap;
 }
 .exposure-label {
-  font-size: 11px;
+  font-size: var(--type-subhead);
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 .exposure-input {
   flex: 1;
   min-width: 140px;
   max-width: 220px;
+  min-height: var(--min-tap-target);
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  padding: 8px 14px;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--type-body);
   color: var(--text-primary);
   outline: none;
   transition: border-color var(--transition);
 }
-.exposure-input:focus { border-color: var(--border-highlight); }
+.exposure-input:focus { border-color: var(--system-blue); }
 .exposure-hint {
-  font-size: 11px;
+  font-size: var(--type-footnote);
   color: var(--text-muted);
 }
 
-/* ── 14. Analyze Button ── */
+/* ── 14. Analyze Button (Apple Action Style) ── */
 .btn-analyze {
-  margin: 0 22px 22px;
-  width: calc(100% - 44px);
-  padding: 13px 24px;
-  background: var(--accent-gold);
-  color: #0B0C10;
+  margin: 0 20px 20px;
+  width: calc(100% - 40px);
+  min-height: 48px;
+  padding: 12px 24px;
+  background: var(--system-blue);
+  color: #FFFFFF;
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: var(--type-headline);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
-  box-shadow: 0 2px 16px rgba(229, 193, 88, 0.18);
+  transition: background var(--transition), transform var(--transition), opacity var(--transition);
+  box-shadow: 0 2px 10px rgba(0, 122, 255, 0.28);
 }
 .btn-analyze:hover:not(:disabled) {
-  background: var(--accent-gold-hover);
+  background: var(--system-blue-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(229, 193, 88, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 122, 255, 0.35);
 }
-.btn-analyze:active:not(:disabled) { transform: translateY(0); }
+.btn-analyze:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
 .btn-analyze:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 /* Spinner inside button */
 .spinner {
-  width: 14px; height: 14px;
-  border: 2px solid rgba(0,0,0,0.2);
-  border-top-color: #0B0C10;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -474,6 +642,33 @@ body {
   align-items: center;
 }
 .error-banner.visible { display: flex; }
+
+/* ══════════════ FEEDBACK MODAL ══════════════ */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal-content {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  color: var(--text-main);
+}
 
 /* ── 17. Responsive ── */
 @media (max-width: 640px) {
@@ -1292,4 +1487,88 @@ body {
   margin-top: 4px;
   font-style: italic;
   line-height: 1.4;
+}
+/* ── 25. Sidebar (Liquid Glass Navigation) ── */
+.sidebar {
+  background: var(--liquid-glass-bg) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid var(--liquid-glass-border) !important;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 4px;
+}
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--min-tap-target);
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: var(--type-subhead);
+  font-weight: 500;
+  transition: background var(--transition), color var(--transition);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-link:hover {
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+}
+.sidebar-link.active {
+  background: var(--accent-gold-glow);
+  color: var(--system-blue) !important;
+  font-weight: 600;
+}
+.sidebar-link.disabled-link {
+  color: var(--text-muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sidebar-toggle-btn {
+  min-width: var(--min-tap-target);
+  min-height: var(--min-tap-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.sidebar-toggle-btn:hover {
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+}
+
+/* ── 26. Apple HIG Layout & Deference Refinements ── */
+.page-header {
+  text-align: center;
+  padding-bottom: 8px;
+}
+.page-header h1 {
+  font-size: var(--type-large-title);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+.page-header p {
+  max-width: 560px;
+  margin: 6px auto 0;
+  font-size: var(--type-subhead);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.focused-layout {
+  max-width: 760px;
 }

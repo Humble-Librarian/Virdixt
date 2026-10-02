@@ -11,6 +11,13 @@ document.addEventListener('alpine:init', () => {
     /* ── Tab state ── */
     activeTab: 'file',
 
+    /* ── Sidebar state ── */
+    sidebarCollapsed: JSON.parse(localStorage.getItem('vx-sidebar') || 'false'),
+    toggleSidebar() {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+      localStorage.setItem('vx-sidebar', JSON.stringify(this.sidebarCollapsed));
+    },
+
     /* ── File input state ── */
     selectedFile: null,
     dragOver: false,
@@ -37,10 +44,60 @@ document.addEventListener('alpine:init', () => {
     _cachedText: '',           // raw text (for text/file sources)
     _cachedSampleName: '',     // sample filename (for sample source)
 
+    /* ── Feedback Loop ── */
+    feedbackModalOpen: false,
+    feedbackSubmitting: false,
+    feedbackForm: {
+      expected_rating: 'MINIMAL_RISK',
+      feedback_text: ''
+    },
+    openFeedbackModal() {
+      this.feedbackModalOpen = true;
+      this.feedbackForm.expected_rating = 'MINIMAL_RISK';
+      this.feedbackForm.feedback_text = '';
+    },
+    closeFeedbackModal() {
+      this.feedbackModalOpen = false;
+    },
+    async submitFeedback() {
+      this.feedbackSubmitting = true;
+      try {
+        const payload = {
+          document_id: this.result?.file_meta?.name || 'unknown_document',
+          expected_rating: this.feedbackForm.expected_rating,
+          actual_rating: this.result?.verdict?.rating || 'unknown',
+          feedback_text: this.feedbackForm.feedback_text
+        };
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Failed to submit feedback');
+        alert('Feedback submitted successfully. The 2x penalty weight has been logged for the RL pipeline.');
+        this.closeFeedbackModal();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        this.feedbackSubmitting = false;
+      }
+    },
+
     // ── Init ──────────────────────────────────────────────────
     async init() {
       this.applyTheme();
-      await this.fetchSamples();
+      if (window.location.pathname.includes('report.html')) {
+        const stored = sessionStorage.getItem('virdixt_report');
+        if (!stored) {
+          window.location.href = '/';
+          return;
+        }
+        this.result = JSON.parse(stored);
+        this.seedSimulator();
+        this.initSidebarObserver();
+      } else {
+        await this.fetchSamples();
+      }
     },
 
     // ── Theme ─────────────────────────────────────────────────
@@ -52,8 +109,33 @@ document.addEventListener('alpine:init', () => {
       localStorage.setItem('vx-theme', this.theme);
       this.applyTheme();
     },
-    get themeIcon()  { return this.theme === 'dark' ? '☀️' : '🌙'; },
-    get themeLabel() { return this.theme === 'dark' ? 'Light mode' : 'Dark mode'; },
+    get themeIcon()  { return ''; },
+    get themeLabel() { return this.theme === 'dark' ? 'Light Mode' : 'Dark Mode'; },
+
+    // ── Sidebar Observer ──────────────────────────────────────
+    initSidebarObserver() {
+      this.$nextTick(() => {
+        const sections = document.querySelectorAll('.panel, .verdict-banner');
+        const navLinks = document.querySelectorAll('.sidebar-link');
+        const observer = new IntersectionObserver((entries) => {
+          let visibleIds = [];
+          entries.forEach(entry => {
+            if (entry.isIntersecting) visibleIds.push(entry.target.id);
+          });
+          if (visibleIds.length > 0) {
+            const activeId = visibleIds[0];
+            navLinks.forEach(link => {
+              link.classList.remove('active');
+              if (link.getAttribute('href') === '#' + activeId) {
+                link.classList.add('active');
+              }
+            });
+          }
+        }, { root: document.querySelector('.report-content'), threshold: 0.2, rootMargin: "-10% 0px -40% 0px" });
+
+        sections.forEach(sec => { if (sec.id) observer.observe(sec); });
+      });
+    },
 
     // ── Samples ───────────────────────────────────────────────
     async fetchSamples() {
@@ -172,13 +254,8 @@ document.addEventListener('alpine:init', () => {
           }
         }
         this.pushTrace('SYNTHESIS', `Complete — total round-trip: ${elapsed}ms`);
-        this.result = data;
-        this.seedSimulator();   // Phase 4: seed slider with initial state
-
-        this.$nextTick(() => {
-          const el = document.getElementById('result-section');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
+        sessionStorage.setItem('virdixt_report', JSON.stringify(data));
+        window.location.href = '/report.html';
 
       } catch (err) {
         this.pushTrace('ERROR', err.message);

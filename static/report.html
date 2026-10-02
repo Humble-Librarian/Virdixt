@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virdixt — Institutional Forensic Audit Intelligence</title>
+  <meta name="description" content="Virdixt: Local-first AI-powered forensic accounting and institutional risk auditing platform. Powered by FinBERT, Altman Z, Beneish M-Score, and Rhetorical Discourse Analysis." />
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="/styles.css" />
+
+  <!-- Alpine.js (Vendored) -->
+  <script defer src="/alpine.min.js"></script>
+</head>
+<body x-data="virdixt" x-init="init()">
+
+  <!-- ══════════════ TOP NAVIGATION ══════════════ -->
+  <header class="topbar">
+    <a href="/" class="back-btn" title="Back to Document Input" aria-label="Back to Document Input">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </a>
+    <div class="topbar-logo">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M11 1L20.5 6.5V15.5L11 21L1.5 15.5V6.5L11 1Z"
+              stroke="var(--system-blue)" stroke-width="1.75" fill="none"/>
+        <path d="M11 5L17 8.5V15.5L11 19L5 15.5V8.5L11 5Z"
+              fill="rgba(10,132,255,0.12)" stroke="var(--system-blue)" stroke-width="1.25"/>
+      </svg>
+      VIRDIXT
+    </div>
+
+    <span class="topbar-center">Forensic Audit Intelligence Platform · Local Engine</span>
+
+    <div class="topbar-right">
+      <button class="theme-toggle" @click="toggleTheme()" :aria-label="themeLabel" id="theme-toggle-btn">
+        <svg x-show="theme === 'dark'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg x-show="theme === 'light'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span x-text="themeLabel"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════════ MAIN CONTENT ══════════════ -->
+  <main class="main-layout">
+
+    
+  <div class="report-container" :class="{ 'sidebar-collapsed': sidebarCollapsed }" style="display:flex; height:calc(100vh - 60px);">
+    <aside class="sidebar" :style="sidebarCollapsed ? 'width:56px;' : 'width:250px;'" style="transition:width 0.3s; overflow:hidden; display:flex; flex-direction:column;">
+      <div style="padding:12px 14px; display:flex; align-items:center;" :style="sidebarCollapsed ? 'justify-content:center;' : 'justify-content:space-between;'">
+        <span x-show="!sidebarCollapsed" style="font-weight:600; font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Sections</span>
+        <button @click="toggleSidebar()" class="sidebar-toggle-btn" aria-label="Toggle Navigation Sidebar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+        </button>
+      </div>
+      <nav x-show="!sidebarCollapsed" class="sidebar-nav">
+        <a href="#verdict-banner" class="sidebar-link">Overview & Verdict</a>
+        <a href="#quant-panel" class="sidebar-link">Forensic Scorecard</a>
+        <a href="#nlp-panel" class="sidebar-link">NLP & Aspects</a>
+        <a href="#masking-panel" class="sidebar-link">Rhetorical Masking</a>
+        <a href="#simulator-panel" class="sidebar-link">What-If Simulator</a>
+        <a href="#" class="sidebar-link disabled-link">History (Soon)</a>
+      </nav>
+    </aside>
+    <div class="report-content" style="flex:1; overflow-y:auto; padding:20px; scroll-behavior: smooth;">
+
+<!-- ══════════════ PHASE 3: AUDIT RESULT DASHBOARD ══════════════ -->
+    <div class="result-section" id="result-section" x-cloak>
+
+      <!-- ── Verdict Banner ── -->
+      <div class="verdict-banner" :class="verdictGradeClass" id="verdict-banner">
+        <div class="verdict-left">
+          <span class="verdict-label">Institutional Risk Verdict</span>
+          <div class="verdict-grade" :class="verdictGradeClass" x-text="result?.verdict?.rating ?? '—'"></div>
+          <div class="verdict-interpretation" x-text="result?.verdict?.interpretation ?? ''"></div>
+          <!-- Override alert -->
+          <div class="verdict-override"
+               x-show="result?.override_reasons?.length"
+               x-text="'Escalated: ' + (result?.override_reasons ?? []).join(', ')">
+          </div>
+        </div>
+        <div class="verdict-right">
+          <div class="verdict-score-row">
+            <span class="verdict-score-num" x-text="distressScore"></span>
+            <span class="verdict-score-label">/ 100 Distress</span>
+          </div>
+          <div class="verdict-meta" x-text="'Score: ' + (result?.verdict?.score ?? '—')"></div>
+          <!-- Priority Index -->
+          <div class="priority-badge" x-show="priorityFormatted" x-cloak>
+            <span x-text="'Priority: ' + priorityFormatted"></span>
+          </div>
+          <button class="feedback-btn" @click="openFeedbackModal()" style="margin-top:12px; font-size:12px; padding:6px 12px; border-radius:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:var(--text-main); cursor:pointer;">
+            Correct this Verdict
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Policy Action Row ── -->
+      <div class="panel" id="policy-panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="dot"></span>ERP Policy Directives</div>
+        </div>
+        <div class="action-row">
+          <span class="action-label">Exposure Tier</span>
+          <span class="action-value" :class="actionGradeClass"
+                x-text="result?.verdict?.interpretation ?? '—'"></span>
+        </div>
+        <div class="action-row">
+          <span class="action-label">Policy Action</span>
+          <span class="action-value" :class="actionGradeClass"
+                x-text="result?.action_flag ?? '—'"></span>
+        </div>
+        <div class="rec-list" id="rec-list">
+          <template x-for="(rec, i) in (result?.action_recommendations ?? [])" :key="i">
+            <div class="rec-item">
+              <span class="rec-bullet" x-text="i + 1"></span>
+              <span x-text="rec"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ── Two-column Lane Grid ── -->
+      <div class="lane-grid">
+
+        <!-- Lane 1: Quantitative Forensic Metrics -->
+        <div class="panel" id="quant-panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="dot"></span>Quantitative Forensic Benchmarks</div>
+          </div>
+          <template x-if="result?.quantitative && Object.keys(result.quantitative).length > 0">
+            <table class="quant-table" id="quant-table">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Score</th>
+                  <th>Interpretation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Altman Z -->
+                <tr x-show="result?.quantitative?.altman_z">
+                  <td>
+                    Altman Z-Score
+                    <div class="quant-formula" x-text="result?.quantitative?.altman_z?.formula ?? ''"></div>
+                  </td>
+                  <td>
+                    <span class="quant-score" x-text="fmtScore(result?.quantitative?.altman_z?.score)"></span>
+                    <div class="quant-na-hint" x-show="result?.quantitative?.altman_z?.score == null">
+                      Requires Total Assets in the document — not detected in this report.
+                    </div>
+                  </td>
+                  <td>
+                    <span class="status-chip"
+                          :class="chipClass(result?.quantitative?.altman_z?.status)"
+                          x-text="result?.quantitative?.altman_z?.status ?? '—'"></span>
+                  </td>
+                </tr>
+                <!-- Beneish M -->
+                <tr x-show="result?.quantitative?.beneish_m">
+                  <td>
+                    Beneish M-Score
+                    <div class="quant-formula"
+                         x-text="'Threshold: ' + (result?.quantitative?.beneish_m?.threshold ?? '−1.78')"></div>
+                  </td>
+                  <td>
+                    <span class="quant-score" x-text="fmtScore(result?.quantitative?.beneish_m?.score)"></span>
+                    <div class="quant-na-hint" x-show="result?.quantitative?.beneish_m?.score == null">
+                      Needs Revenue, Net Income &amp; Total Debt — one or more were absent in this report.
+                    </div>
+                  </td>
+                  <td>
+                    <span class="status-chip"
+                          :class="chipClass(result?.quantitative?.beneish_m?.status)"
+                          x-text="result?.quantitative?.beneish_m?.status ?? '—'"></span>
+                  </td>
+                </tr>
+                <!-- Benford Law -->
+                <tr x-show="result?.quantitative?.benford_law != null">
+                  <td>Benford's Law</td>
+                  <td><span class="quant-score">—</span></td>
+                  <td>
+                    <span class="status-chip"
+                          :class="result?.quantitative?.benford_law?.anomaly_detected ? 'chip-danger' : 'chip-success'"
+                          x-text="result?.quantitative?.benford_law?.anomaly_detected ? 'Anomaly' : 'Normal'"></span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+          <template x-if="!result?.quantitative || Object.keys(result.quantitative).length === 0">
+            <div class="masking-empty">
+              No structured financial figures (e.g. Total Assets, Revenue, Debt) were detected in this document.
+              Forensic scores (Altman Z, Beneish M, Piotroski F) require explicit numerical balance-sheet data —
+              they will appear automatically once a report containing those figures is analysed.
+            </div>
+          </template>
+        </div>
+
+        <!-- Lane 2: NLP & Sentiment Vector -->
+        <div class="panel" id="nlp-panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="dot" style="background:var(--status-info);box-shadow:0 0 6px var(--status-info);"></span>NLP & Tone Classification</div>
+          </div>
+          <div class="sentiment-grid">
+            <div class="sentiment-row">
+              <span class="sentiment-key">Sentiment Tone</span>
+              <span class="sentiment-val verdict-grade" :class="toneClass"
+                    x-text="result?.nlp_sentiment?.tone ?? '—'"></span>
+            </div>
+            <div class="sentiment-row">
+              <span class="sentiment-key">Composite Distress Score</span>
+              <span class="sentiment-val" x-text="distressScore + ' / 100'"></span>
+            </div>
+            <div class="sentiment-row">
+              <span class="sentiment-key">Completeness Badge</span>
+              <span class="sentiment-val" x-text="result?.completeness ?? '—'"></span>
+            </div>
+          </div>
+          <!-- Key aspect triggers -->
+          <div class="trigger-chips" x-show="(result?.nlp_sentiment?.key_triggers ?? []).length > 0" id="trigger-chips">
+            <template x-for="t in (result?.nlp_sentiment?.key_triggers ?? [])" :key="t">
+              <span class="trigger-chip" x-text="t"></span>
+            </template>
+          </div>
+        </div>
+
+      </div><!-- end lane-grid -->
+
+      <!-- Lane 3: Rhetorical Masking Callouts (full width) -->
+      <div class="panel" id="masking-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="dot" style="background:var(--status-warning);box-shadow:0 0 6px var(--status-warning);"></span>
+            Rhetorical Masking & Discourse Analysis
+          </div>
+          <span style="font-size:11px;color:var(--text-muted);"
+                x-text="(result?.rhetorical_masking?.callouts ?? []).length + ' callout(s) detected'"></span>
+        </div>
+        <template x-if="(result?.rhetorical_masking?.callouts ?? []).length === 0">
+          <div class="masking-empty">No rhetorical masking patterns detected in this document.</div>
+        </template>
+        <template x-for="(c, i) in (result?.rhetorical_masking?.callouts ?? [])" :key="i">
+          <div class="callout-item" :id="'callout-' + i">
+            <div class="callout-score">
+              Masking Score: <span x-text="(c.masking_score * 100).toFixed(0) + '%'"></span>
+            </div>
+            <div class="callout-sentence" x-text="c.sentence"></div>
+            <div class="callout-explanation" x-text="c.explanation"></div>
+          </div>
+        </template>
+      </div>
+
+      <!-- ══ Lane 4: What-If Exposure Simulator ══ -->
+      <div class="panel" id="simulator-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="dot" style="background:var(--accent-gold);box-shadow:0 0 6px var(--accent-gold);"></span>
+            Live What-If Exposure Simulator
+          </div>
+          <div class="sim-status" id="sim-status">
+            <template x-if="simulating">
+              <span class="sim-spinner"></span>
+            </template>
+            <span x-text="simulating ? 'Recalculating…' : (simResult ? 'Last updated @ ' + simLastTs : 'Move slider to simulate')"></span>
+          </div>
+        </div>
+
+        <div class="sim-body">
+
+          <!-- ── Exposure slider (always visible) ─────────── -->
+          <div>
+            <div class="sim-input-row" style="margin-bottom:10px;">
+              <span class="sim-input-label">Exposure Value</span>
+              <span class="sim-exposure-display" x-text="simExposureFmt"></span>
+            </div>
+            <input class="sim-slider"
+                   type="range"
+                   id="sim-slider"
+                   min="0"
+                   max="100000000"
+                   step="500000"
+                   x-model.number="simExposure"
+                   @input="onSimSlider()"
+                   aria-label="Exposure simulator slider" />
+            <div class="sim-slider-ticks">
+              <span>$0</span><span>$25M</span><span>$50M</span><span>$75M</span><span>$100M+</span>
+            </div>
+          </div>
+
+          <!-- ── Multi-variable financial fact sliders ─────── -->
+          <template x-if="simHasFinancialFacts">
+            <div id="sim-fact-sliders">
+              <div style="font-size:11px;color:var(--text-muted);margin:14px 0 10px;letter-spacing:.06em;text-transform:uppercase;">
+                Nudge Financial Variables
+              </div>
+              <template x-for="(meta, i) in simFactsMeta" :key="meta.key">
+                <div class="sim-fact-row" :id="'sim-fact-' + i">
+                  <div class="sim-input-row" style="margin-bottom:4px;">
+                    <span class="sim-input-label" x-text="meta.label"></span>
+                    <span class="sim-exposure-display" x-text="fmtMoney(simFacts[meta.key])"></span>
+                  </div>
+                  <input class="sim-slider sim-slider-sm"
+                         type="range"
+                         :min="meta.min"
+                         :max="meta.max"
+                         :step="meta.step"
+                         x-model.number="simFacts[meta.key]"
+                         @input="onSimInput()"
+                         :aria-label="'Slider for ' + meta.label" />
+                  <div class="sim-slider-ticks" style="font-size:10px;">
+                    <span x-text="fmtMoney(meta.min)"></span>
+                    <span x-text="fmtMoney(meta.value)"></span>
+                    <span x-text="fmtMoney(meta.max)"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <!-- ── Metric cards ──────────────────────────────── -->
+          <div class="sim-metrics" id="sim-metrics" x-show="simResult || simulating">
+            <!-- Priority Index -->
+            <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-priority">
+              <span class="sim-metric-label">Priority Index</span>
+              <span class="sim-metric-value" x-text="simPriorityFmt"></span>
+              <span class="sim-delta" :class="simPriorityDeltaClass" x-text="simPriorityDelta" x-show="simPriorityDelta"></span>
+            </div>
+            <!-- Risk Grade -->
+            <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-grade">
+              <span class="sim-metric-label">Risk Grade</span>
+              <span class="sim-metric-value" :class="simGradeClass" x-text="simResult?.verdict?.rating ?? '—'"></span>
+              <span class="sim-delta" :class="simGradeChanged ? 'up' : 'same'"
+                    x-text="simGradeChanged ? '↕ Changed from ' + _simBaseRating : ''"
+                    x-show="simResult"></span>
+            </div>
+            <!-- Action Flag -->
+            <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-action">
+              <span class="sim-metric-label">Policy Action</span>
+              <span class="sim-metric-value" style="font-size:13px;word-break:break-word;"
+                    :class="simGradeClass"
+                    x-text="simResult?.action_flag ?? '—'"></span>
+            </div>
+            <!-- Altman Z (only when forensic data available) -->
+            <template x-if="simResult?.forensic_scores?.altman_z?.score != null">
+              <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-altman">
+                <span class="sim-metric-label">Altman Z-Score</span>
+                <span class="sim-metric-value" x-text="simAltmanFmt"></span>
+                <span class="status-chip" :class="simAltmanClass" x-text="simAltmanZone"
+                      style="font-size:10px;padding:2px 8px;margin-top:4px;"></span>
+              </div>
+            </template>
+          </div>
+
+          <!-- Override reason banner -->
+          <div x-show="simOverrideText" class="sim-override-note" x-text="simOverrideText"></div>
+
+        </div>
+
+      </div>
+
+    </div><!-- end result-section -->
+    </div>
+  </div>
+
+  </main>
+
+  <!-- Feedback Modal -->
+  <div class="modal-overlay" x-show="feedbackModalOpen" style="display: none;" x-cloak>
+    <div class="modal-content">
+      <h3 style="margin-top:0; margin-bottom:16px;">Correct this Verdict</h3>
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px;">Expected Rating</label>
+        <select x-model="feedbackForm.expected_rating" style="width:100%; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-panel); color:var(--text-main);">
+          <option value="CRITICAL_RISK">CRITICAL RISK</option>
+          <option value="WARNING">WARNING</option>
+          <option value="MONITOR">MONITOR</option>
+          <option value="MINIMAL_RISK">MINIMAL RISK</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px;">Feedback (Why is this wrong?)</label>
+        <textarea x-model="feedbackForm.feedback_text" rows="4" style="width:100%; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-panel); color:var(--text-main);"></textarea>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button @click="closeFeedbackModal()" style="padding:8px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:var(--text-main); cursor:pointer;">Cancel</button>
+        <button @click="submitFeedback()" style="padding:8px 16px; border-radius:8px; border:none; background:var(--system-blue); color:#fff; cursor:pointer;" :disabled="feedbackSubmitting" x-text="feedbackSubmitting ? 'Submitting...' : 'Submit (2x Penalty)'"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
+

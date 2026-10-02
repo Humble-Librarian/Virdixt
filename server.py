@@ -9,6 +9,7 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTa
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
+from pydantic import BaseModel
 
 from infer import (
     LayaSystem1, AnchorTokenPruner, FinancialAdvisor, AdvisorResult,
@@ -363,6 +364,26 @@ async def simulate_facts(request: Request):
         "override_reasons":     override_reasons,
     }
 
+
+class FeedbackPayload(BaseModel):
+    document_id: str
+    expected_rating: str
+    actual_rating: str
+    feedback_text: str
+
+@app.post("/api/feedback")
+async def submit_feedback(payload: FeedbackPayload):
+    feedback_entry = {
+        "document_id": payload.document_id,
+        "expected_rating": payload.expected_rating,
+        "actual_rating": payload.actual_rating,
+        "feedback_text": payload.feedback_text,
+        "penalty_level": 2.0,
+        "timestamp": time.time()
+    }
+    with open("feedback_loop.jsonl", "a") as f:
+        f.write(json.dumps(feedback_entry) + "\n")
+    return {"status": "success", "message": "Feedback logged for RL pipeline."}
 
 if os.path.exists("static"):
     app.mount("/", StaticFiles(directory="static", html=True), name="static")

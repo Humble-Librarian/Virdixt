@@ -220,6 +220,7 @@
       </div>
 
       <div class="trace-console" id="trace-console">
+        <template x-for="(log, idx) in traceLogs" :key="idx">
           <div class="trace-line">
             <span class="trace-ts" x-text="'[' + log.ts + ']'"></span>
             <span class="trace-stage" :class="log.stage" x-text="log.stage + ' ──▸'"></span>
@@ -308,7 +309,12 @@
                     Altman Z-Score
                     <div class="quant-formula" x-text="result?.quantitative?.altman_z?.formula ?? ''"></div>
                   </td>
-                  <td><span class="quant-score" x-text="fmtScore(result?.quantitative?.altman_z?.score)"></span></td>
+                  <td>
+                    <span class="quant-score" x-text="fmtScore(result?.quantitative?.altman_z?.score)"></span>
+                    <div class="quant-na-hint" x-show="result?.quantitative?.altman_z?.score == null">
+                      Requires Total Assets in the document — not detected in this report.
+                    </div>
+                  </td>
                   <td>
                     <span class="status-chip"
                           :class="chipClass(result?.quantitative?.altman_z?.status)"
@@ -322,7 +328,12 @@
                     <div class="quant-formula"
                          x-text="'Threshold: ' + (result?.quantitative?.beneish_m?.threshold ?? '−1.78')"></div>
                   </td>
-                  <td><span class="quant-score" x-text="fmtScore(result?.quantitative?.beneish_m?.score)"></span></td>
+                  <td>
+                    <span class="quant-score" x-text="fmtScore(result?.quantitative?.beneish_m?.score)"></span>
+                    <div class="quant-na-hint" x-show="result?.quantitative?.beneish_m?.score == null">
+                      Needs Revenue, Net Income &amp; Total Debt — one or more were absent in this report.
+                    </div>
+                  </td>
                   <td>
                     <span class="status-chip"
                           :class="chipClass(result?.quantitative?.beneish_m?.status)"
@@ -343,7 +354,11 @@
             </table>
           </template>
           <template x-if="!result?.quantitative || Object.keys(result.quantitative).length === 0">
-            <div class="masking-empty">No financial data fields detected — forensic accounting lane did not run.</div>
+            <div class="masking-empty">
+              No structured financial figures (e.g. Total Assets, Revenue, Debt) were detected in this document.
+              Forensic scores (Altman Z, Beneish M, Piotroski F) require explicit numerical balance-sheet data —
+              they will appear automatically once a report containing those figures is analysed.
+            </div>
           </template>
         </div>
 
@@ -399,6 +414,114 @@
             <div class="callout-explanation" x-text="c.explanation"></div>
           </div>
         </template>
+      </div>
+
+      <!-- ══ Lane 4: What-If Exposure Simulator ══ -->
+      <div class="panel" id="simulator-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="dot" style="background:var(--accent-gold);box-shadow:0 0 6px var(--accent-gold);"></span>
+            Live What-If Exposure Simulator
+          </div>
+          <div class="sim-status" id="sim-status">
+            <template x-if="simulating">
+              <span class="sim-spinner"></span>
+            </template>
+            <span x-text="simulating ? 'Recalculating…' : (simResult ? 'Last updated @ ' + simLastTs : 'Move slider to simulate')"></span>
+          </div>
+        </div>
+
+        <div class="sim-body">
+
+          <!-- ── Exposure slider (always visible) ─────────── -->
+          <div>
+            <div class="sim-input-row" style="margin-bottom:10px;">
+              <span class="sim-input-label">Exposure Value</span>
+              <span class="sim-exposure-display" x-text="simExposureFmt"></span>
+            </div>
+            <input class="sim-slider"
+                   type="range"
+                   id="sim-slider"
+                   min="0"
+                   max="100000000"
+                   step="500000"
+                   x-model.number="simExposure"
+                   @input="onSimSlider()"
+                   aria-label="Exposure simulator slider" />
+            <div class="sim-slider-ticks">
+              <span>$0</span><span>$25M</span><span>$50M</span><span>$75M</span><span>$100M+</span>
+            </div>
+          </div>
+
+          <!-- ── Multi-variable financial fact sliders ─────── -->
+          <template x-if="simHasFinancialFacts">
+            <div id="sim-fact-sliders">
+              <div style="font-size:11px;color:var(--text-muted);margin:14px 0 10px;letter-spacing:.06em;text-transform:uppercase;">
+                Nudge Financial Variables
+              </div>
+              <template x-for="(meta, i) in simFactsMeta" :key="meta.key">
+                <div class="sim-fact-row" :id="'sim-fact-' + i">
+                  <div class="sim-input-row" style="margin-bottom:4px;">
+                    <span class="sim-input-label" x-text="meta.label"></span>
+                    <span class="sim-exposure-display" x-text="fmtMoney(simFacts[meta.key])"></span>
+                  </div>
+                  <input class="sim-slider sim-slider-sm"
+                         type="range"
+                         :min="meta.min"
+                         :max="meta.max"
+                         :step="meta.step"
+                         x-model.number="simFacts[meta.key]"
+                         @input="onSimInput()"
+                         :aria-label="'Slider for ' + meta.label" />
+                  <div class="sim-slider-ticks" style="font-size:10px;">
+                    <span x-text="fmtMoney(meta.min)"></span>
+                    <span x-text="fmtMoney(meta.value)"></span>
+                    <span x-text="fmtMoney(meta.max)"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <!-- ── Metric cards ──────────────────────────────── -->
+          <div class="sim-metrics" id="sim-metrics" x-show="simResult || simulating">
+            <!-- Priority Index -->
+            <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-priority">
+              <span class="sim-metric-label">Priority Index</span>
+              <span class="sim-metric-value" x-text="simPriorityFmt"></span>
+              <span class="sim-delta" :class="simPriorityDeltaClass" x-text="simPriorityDelta" x-show="simPriorityDelta"></span>
+            </div>
+            <!-- Risk Grade -->
+            <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-grade">
+              <span class="sim-metric-label">Risk Grade</span>
+              <span class="sim-metric-value" :class="simGradeClass" x-text="simResult?.verdict?.rating ?? '—'"></span>
+              <span class="sim-delta" :class="simGradeChanged ? 'up' : 'same'"
+                    x-text="simGradeChanged ? '↕ Changed from ' + _simBaseRating : ''"
+                    x-show="simResult"></span>
+            </div>
+            <!-- Action Flag -->
+            <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-action">
+              <span class="sim-metric-label">Policy Action</span>
+              <span class="sim-metric-value" style="font-size:13px;word-break:break-word;"
+                    :class="simGradeClass"
+                    x-text="simResult?.action_flag ?? '—'"></span>
+            </div>
+            <!-- Altman Z (only when forensic data available) -->
+            <template x-if="simResult?.forensic_scores?.altman_z?.score != null">
+              <div class="sim-metric-card" :class="{ updating: simulating }" id="sim-card-altman">
+                <span class="sim-metric-label">Altman Z-Score</span>
+                <span class="sim-metric-value" x-text="simAltmanFmt"></span>
+                <span class="status-chip" :class="simAltmanClass" x-text="simAltmanZone"
+                      style="font-size:10px;padding:2px 8px;margin-top:4px;"></span>
+              </div>
+            </template>
+          </div>
+
+          <!-- Override reason banner -->
+          <div x-show="simOverrideText" class="sim-override-note" x-text="simOverrideText"></div>
+
+        </div>
+
       </div>
 
     </div><!-- end result-section -->

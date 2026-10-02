@@ -34,6 +34,8 @@ document.addEventListener('alpine:init', () => {
 
     /* ── Result ── */
     result: null,
+    _cachedText: '',           // raw text (for text/file sources)
+    _cachedSampleName: '',     // sample filename (for sample source)
 
     // ── Init ──────────────────────────────────────────────────
     async init() {
@@ -141,12 +143,18 @@ document.addEventListener('alpine:init', () => {
         if (this.activeTab === 'file' && this.selectedFile) {
           this.pushTrace('INGESTION', `Reading file: ${this.selectedFile.name} (${this.fileSizeLabel})`);
           form.append('file', this.selectedFile);
+          this._cachedText = await this.selectedFile.text().catch(() => '');
+          this._cachedSampleName = '';
         } else if (this.activeTab === 'text') {
           this.pushTrace('INGESTION', `Processing raw text input (${this.rawText.trim().length} chars)`);
           form.append('text', this.rawText.trim());
+          this._cachedText = this.rawText.trim();
+          this._cachedSampleName = '';
         } else if (this.activeTab === 'sample') {
           this.pushTrace('INGESTION', `Loading sample report: ${this.selectedSample.filename}`);
           form.append('sample_name', this.selectedSample.filename);
+          this._cachedSampleName = this.selectedSample.filename;
+          this._cachedText = '';
         }
 
         const res = await fetch('/api/analyze', { method: 'POST', body: form });
@@ -165,6 +173,7 @@ document.addEventListener('alpine:init', () => {
         }
         this.pushTrace('SYNTHESIS', `Complete — total round-trip: ${elapsed}ms`);
         this.result = data;
+        this.seedSimulator();   // Phase 4: seed slider with initial state
 
         this.$nextTick(() => {
           const el = document.getElementById('result-section');
@@ -223,6 +232,178 @@ document.addEventListener('alpine:init', () => {
     get actionGradeClass() {
       return 'grade-' + (this.result?.verdict?.rating ?? 'MONITOR');
     },
+
+    // ══════════════════════════════════════════════════════════
+    // PHASE 4 — Multi-Variable In-Memory What-If Simulator
+    // Calls /api/simulate_facts (pure arithmetic ~2ms, zero ML)
+    // ══════════════════════════════════════════════════════════
+
+    simResult:          null,
+    simulating:         false,
+    simLastTs:          '',
+    _simDebounceTimer:  null,
+    _simBasePriority:   null,
+    _simBaseRating:     null,
+    _frozenTextSignals: null,
+    simExposure:        0,
+    simFacts:           {},      // live copy of financial_facts being nudged
+    simFactsMeta:       [],      // [{ key, label, value, min, max, step }]
+
+    // ── Formatters ─────────────────────────────────────────
+    get simExposureFmt() {
+      const v = this.simExposure;
+      if (v === 0) return '$0';
+      if (v >= 1000000)  return '$' + (v / 1000000).toFixed(1) + 'M';
+      if (v >= 1000)     return '$' + (v / 1000).toFixed(0) + 'K';
+      return '$' + v;
+    },
+
+    fmtMoney(v) {
+      if (v == null || isNaN(v)) return 'N/A';
+      const abs = Math.abs(v), sign = v < 0 ? '-' : '';
+      if (abs >= 1e9)  return sign + '$' + (abs / 1e9).toFixed(2)  + 'B';
+      if (abs >= 1e6)  return sign + '$' + (abs / 1e6).toFixed(1)  + 'M';
+      if (abs >= 1e3)  return sign + '$' + (abs / 1e3).toFixed(0)  + 'K';
+      return sign + '$' + abs.toFixed(0);
+    },
+
+    get simGradeClass()     { return 'grade-' + (this.simResult?.verdict?.rating ?? 'MONITOR'); },
+    get simBaseGradeClass() { return 'grade-' + (this._simBaseRating ?? 'MONITOR'); },
+
+    get simPriorityFmt() {
+      const p = this.simResult?.priority_index;
+      if (p == null) return '—';
+      if (p === 0)   return '$0';
+      return '$' + p.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    },
+
+    get simPriorityDelta() {
+      if (!this.simResult || this._simBasePriority == null) return '';
+      const delta = (this.simResult.priority_index ?? 0) - this._simBasePriority;
+      if (Math.abs(delta) < 1) return '';
+      const sign = delta > 0 ? '▲ +' : '▼ ';
+      return sign + '$' + Math.abs(delta).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    },
+
+    get simPriorityDeltaClass() {
+      if (!this.simResult || this._simBasePriority == null) return 'same';
+      const delta = (this.simResult.priority_index ?? 0) - this._simBasePriority;
+      if (delta > 1)  return 'up';
+      if (delta < -1) return 'down';
+      return 'same';
+    },
+
+    get simGradeChanged() {
+      return this.simResult && this._simBaseRating &&
+             this.simResult.verdict.rating !== this._simBaseRating;
+    },
+
+    get simAltmanFmt() {
+      const z = this.simResult?.forensic_scores?.altman_z?.score;
+      return (z != null && !isNaN(z)) ? Number(z).toFixed(2) : '—';
+    },
+    get simAltmanZone()  { return this.simResult?.forensic_scores?.altman_z?.status ?? ''; },
+    get simAltmanClass() {
+      const s = this.simAltmanZone;
+      if (s.includes('DISTRESS')) return 'chip-danger';
+      if (s.includes('GREY'))     return 'chip-warning';
+      if (s.includes('SAFE'))     return 'chip-success';
+      return 'chip-neutral';
+    },
+
+    get simHasFinancialFacts() { return this.simFactsMeta.length > 0; },
+
+    get simOverrideText() {
+      const ors = this.simResult?.override_reasons ?? [];
+      return ors.length ? 'Forensic override: ' + ors.join(', ') : '';
+    },
+
+    // ── Seed simulator when analysis result arrives ────────
+    seedSimulator() {
+      if (!this.result) return;
+      const snap = this.result.simulator_snapshot;
+      this._simBasePriority   = this.result.priority_index ?? 0;
+      this._simBaseRating     = this.result.verdict?.rating ?? null;
+      this._frozenTextSignals = snap?.frozen_text_signals ?? null;
+      this.simExposure        = this.exposure || 0;
+      this.simResult          = null;
+
+      // Build dynamic slider metadata from financial_facts
+      const rawFacts = snap?.financial_facts ?? {};
+      this.simFacts     = {};
+      this.simFactsMeta = [];
+
+      const LABELS = {
+        'revenue':           'Revenue / Sales',   'sales':             'Revenue / Sales',
+        'operating income':  'EBIT / Op. Income', 'ebit':              'EBIT / Op. Income',
+        'net income':        'Net Income',         'net profit':        'Net Income',
+        'total assets':      'Total Assets',       'assets':            'Total Assets',
+        'total debt':        'Total Debt',         'debt':              'Total Debt',
+        'liabilities':       'Total Liabilities',
+        'cash':              'Cash & Equivalents',
+        'working capital':   'Working Capital',
+        'retained earnings': 'Retained Earnings',
+        'equity':            'Equity',
+      };
+
+      const seen = new Set();
+      for (const [rawKey, rawVal] of Object.entries(rawFacts)) {
+        if (rawKey.startsWith('_') || rawVal == null || typeof rawVal !== 'number') continue;
+        const kLow = rawKey.toLowerCase().replace(/_/g,' ').replace(/-/g,' ');
+        let label = rawKey;
+        for (const [frag, lbl] of Object.entries(LABELS)) {
+          if (kLow.includes(frag)) { label = lbl; break; }
+        }
+        if (seen.has(label)) continue;
+        seen.add(label);
+
+        const absVal   = Math.abs(rawVal);
+        const magnitude = Math.pow(10, Math.floor(Math.log10(Math.max(absVal, 1))));
+        const step     = Math.max(magnitude / 10, 1);
+        const minV     = Math.round(rawVal < 0 ? rawVal * 3 : 0);
+        const maxV     = Math.round(rawVal < 0 ? 0 : rawVal * 3);
+
+        this.simFacts[rawKey] = rawVal;
+        this.simFactsMeta.push({ key: rawKey, label, value: rawVal, min: minV, max: maxV, step });
+      }
+    },
+
+    // ── Input handlers ─────────────────────────────────────
+    onSimInput()  {
+      clearTimeout(this._simDebounceTimer);
+      this._simDebounceTimer = setTimeout(() => this.simulateFacts(), 200);
+    },
+    onSimSlider() { this.onSimInput(); },   // legacy alias
+
+    // ── Core simulation call ───────────────────────────────
+    async simulateFacts() {
+      if (!this._frozenTextSignals) return;
+      this.simulating = true;
+      const t0 = performance.now();
+      try {
+        const payload = {
+          financial_facts:     this.simFacts,
+          frozen_text_signals: this._frozenTextSignals,
+          exposure:            this.simExposure,
+        };
+        const res = await fetch('/api/simulate_facts', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Simulation failed');
+        this.simResult = await res.json();
+        const ms = (performance.now() - t0).toFixed(0);
+        this.simLastTs = this.nowTs() + ' (' + ms + 'ms)';
+      } catch (e) {
+        console.error('Simulator error:', e);
+      } finally {
+        this.simulating = false;
+      }
+    },
+
+    // Legacy simulate() kept for backward compat with old tests
+    async simulate() { await this.simulateFacts(); },
 
   }));
 

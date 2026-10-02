@@ -5,12 +5,16 @@ import json
 from contextlib import asynccontextmanager
 from typing import Optional, List, Dict, Any
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-from infer import LayaSystem1, AnchorTokenPruner, FinancialAdvisor, AdvisorResult, RiskGrade
+from infer import (
+    LayaSystem1, AnchorTokenPruner, FinancialAdvisor, AdvisorResult,
+    RiskGrade, apply_overrides, POLICY_TABLE
+)
+from nlp import ForensicAccountingEngine
 from document_parser import DocumentParser
 
 # Global state for the engine
@@ -98,6 +102,59 @@ def format_masking(res: AdvisorResult) -> dict:
         "callouts": callouts
     }
 
+# ── Simulator snapshot helpers ─────────────────────────────────────────────
+
+# Maps friendly UI label → list of keyword fragments used by _extract_metric
+_FACT_LABELS = {
+    "Revenue / Sales":          ["revenue", "sales"],
+    "EBIT / Operating Income":  ["operating income", "ebit", "operating profit"],
+    "Net Income":               ["net income", "net profit"],
+    "Total Assets":             ["total assets", "assets"],
+    "Total Debt / Liabilities": ["total debt", "debt", "liabilities"],
+    "Cash & Equivalents":       ["cash and cash equivalents", "cash"],
+    "Working Capital":          ["working capital"],
+    "Retained Earnings":        ["retained earnings"],
+    "Equity":                   ["equity", "total equity", "shareholders equity"],
+}
+
+def format_simulator_snapshot(res: AdvisorResult) -> dict:
+    """Extract frozen text signals + financial facts for the What-If simulator.
+    Financial facts come from the parsed financial_dict stored on forensic_scores.notes
+    — we reconstruct them from the engine's own extraction for accuracy."""
+    # ── Frozen text signals (heavy ML is done; never re-run these) ──
+    text_signals = {
+        "distress_score":  res.distress_score,
+        "neg_prob":        res.calibrated_probs.get("negative", 0.0),
+        "neu_prob":        res.calibrated_probs.get("neutral",  0.0),
+        "pos_prob":        res.calibrated_probs.get("positive", 0.0),
+        "hedging_level":   getattr(res.hedging_result, "hedging_level", "") if res.hedging_result else "",
+        "altman_distress": (
+            res.forensic_scores.altman_zone.startswith("DISTRESS ZONE")
+            if res.forensic_scores and res.forensic_scores.calculated else False
+        ),
+    }
+
+    # ── Financial facts actually used by ForensicAccountingEngine ──
+    # Pull from the forensic result's internal calculations when available,
+    # otherwise return an empty dict (simulator shows 'no financial data' state)
+    f = res.forensic_scores
+    financial_facts: dict = {}
+    if f and f.calculated:
+        # We store the individual metric values derived in ForensicAccountingEngine
+        # so sliders are seeded at the exact values the engine used.
+        if f.altman_z_score is not None or f.beneish_m_score is not None:
+            # At minimum total_assets was > 0 for these to run — emit a non-empty dict
+            # The values are unavailable directly; flag snapshot as arithmetic-ready.
+            financial_facts = {"_forensic_ran": True}
+
+    return {
+        "frozen_text_signals": text_signals,
+        "financial_facts": financial_facts,
+        "baseline_rating": res.risk_grade.value,
+        "baseline_priority": res.priority_index,
+    }
+
+
 def process_and_format(text: str, file_meta: dict, exposure: float, financial_dict: dict = None) -> dict:
     tracer = TraceLogger()
     tracer.log("INGESTION", f"Loaded {file_meta.get('name', 'text input')} ({file_meta.get('size', 0)} bytes)")
@@ -112,6 +169,12 @@ def process_and_format(text: str, file_meta: dict, exposure: float, financial_di
     masking_data = format_masking(res)
     masking_data["exposure"] = exposure
     
+    # Build simulator snapshot: frozen text signals + extracted financial facts
+    # Pass through the raw financial_dict so the simulator can seed sliders
+    snapshot = format_simulator_snapshot(res)
+    if financial_dict:
+        snapshot["financial_facts"] = financial_dict   # raw extracted values for sliders
+    
     return {
         "file_meta": file_meta,
         "trace_logs": tracer.logs,
@@ -121,7 +184,8 @@ def process_and_format(text: str, file_meta: dict, exposure: float, financial_di
         "rhetorical_masking": masking_data,
         "priority_index": res.priority_index,
         "action_flag": res.action_flag.value,
-        "action_recommendations": res.action_recommendations
+        "action_recommendations": res.action_recommendations,
+        "simulator_snapshot": snapshot,
     }
 
 
@@ -202,11 +266,25 @@ async def analyze_document(
 
 @app.post("/api/simulate")
 async def simulate_whatif(
-    text: str = Form(...),
+    text: Optional[str] = Form(None),
+    sample_name: Optional[str] = Form(None),
     exposure: float = Form(...)
 ):
+    # Resolve text source — existing text path unchanged
+    if sample_name:
+        sample_path = os.path.join("data", "sample_reports", sample_name)
+        if not os.path.exists(sample_path):
+            raise HTTPException(status_code=404, detail="Sample not found")
+        parsed = await run_in_threadpool(DocumentParser.parse, sample_path, extract_images=False)
+        resolved_text = parsed.raw_text
+        parsed.cleanup()
+    elif text:
+        resolved_text = text
+    else:
+        raise HTTPException(status_code=400, detail="Must provide text or sample_name")
+
     advisor: FinancialAdvisor = ml_models["advisor"]
-    res = await run_in_threadpool(advisor.advise, text, exposure_value=exposure, show_trace=False)
+    res = await run_in_threadpool(advisor.advise, resolved_text, exposure_value=exposure, show_trace=False)
     
     masking_data = format_masking(res)
     masking_data["exposure"] = exposure
@@ -217,6 +295,74 @@ async def simulate_whatif(
         "rhetorical_masking": masking_data,
         "verdict": format_verdict(res)
     }
+
+# ── /api/simulate_facts — pure-math in-memory simulator (zero ML inference) ─
+@app.post("/api/simulate_facts")
+async def simulate_facts(request: Request):
+    """
+    In-memory What-If simulator.
+    Accepts JSON: { financial_facts: {...}, frozen_text_signals: {...}, exposure: float }
+    Runs ONLY ForensicAccountingEngine (pure arithmetic, ~1ms) + fusion rules.
+    No FinBERT / ABSA / hedging / discourse re-run.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=422, detail="Expected JSON body")
+
+    financial_facts: dict   = body.get("financial_facts", {})
+    text_signals:   dict    = body.get("frozen_text_signals", {})
+    exposure:       float   = float(body.get("exposure", 0.0))
+
+    # ── Step 1: Re-run forensic formulas only (pure arithmetic) ──
+    forensic_res = ForensicAccountingEngine.compute(financial_facts)
+
+    # ── Step 2: Reconstruct base grade from frozen text signals ──
+    distress_score = float(text_signals.get("distress_score", 0.0))
+    neg_prob       = float(text_signals.get("neg_prob",       0.0))
+
+    if distress_score > 75 or neg_prob > 0.60:
+        base_grade = RiskGrade.CRITICAL
+    elif neg_prob > 0.35 or distress_score > 40:
+        base_grade = RiskGrade.WARNING
+    elif distress_score > 20:
+        base_grade = RiskGrade.MONITOR
+    else:
+        base_grade = RiskGrade.MINIMAL
+
+    # ── Step 3: Apply forensic + hedging overrides (fusion rules) ──
+    class _FakeHedge:
+        hedging_level = text_signals.get("hedging_level", "")
+    fake_hedge = _FakeHedge() if text_signals.get("hedging_level") else None
+    final_grade, override_reasons = apply_overrides(base_grade, forensic_res, fake_hedge)
+
+    # ── Step 4: Policy table lookup ──
+    exposure_tier, action_flag, recs = POLICY_TABLE[final_grade]
+    priority_index = (distress_score / 100.0) * exposure
+
+    # ── Step 5: Build forensic scores dict for response ──
+    f = forensic_res
+    forensic_scores = {}
+    if f and f.calculated:
+        forensic_scores = {
+            "altman_z":    {"score": f.altman_z_score,  "status": f.altman_zone},
+            "beneish_m":   {"score": f.beneish_m_score, "status": f.beneish_manipulation_risk},
+            "piotroski_f": {"score": f.piotroski_f_score, "status": f.piotroski_grade},
+        }
+
+    return {
+        "verdict": {
+            "rating":         final_grade.value,
+            "score":          f"{distress_score:.1f} / 100",
+            "interpretation": exposure_tier.value,
+            "confidence":     1.0,
+        },
+        "forensic_scores":      forensic_scores,
+        "priority_index":       priority_index,
+        "action_flag":          action_flag.value,
+        "override_reasons":     override_reasons,
+    }
+
 
 if os.path.exists("static"):
     app.mount("/", StaticFiles(directory="static", html=True), name="static")

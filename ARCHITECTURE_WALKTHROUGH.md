@@ -162,14 +162,14 @@ flowchart LR
 ```
 
 1. **[`prepare_data.py`](file:///d:/Virdixt/prepare_data.py):** Downloads authentic financial news headlines and maps labels cleanly.
-2. **[`synthetic_builder.py`](file:///d:/Virdixt/synthetic_builder.py):** Generates 1,500 domain-specific accounting statements (*impairment charges, debt covenant headroom, EBITDA margin*).
-3. **[`complex_sentence_injector.py`](file:///d:/Virdixt/complex_sentence_injector.py):** Injects 750 complex sentences using *"Although"*, *"Despite"*, and *"Notwithstanding"*, teaching the model that **Cash Flow always beats Revenue**.
-4. **[`build_rich_dataset.py`](file:///d:/Virdixt/build_rich_dataset.py):** Balances all 3 classes to exactly **2,100 rows each**, eliminating model bias.
+2. **[`synthetic_builder.py`](file:///d:/Virdixt/synthetic_builder.py):** Generates 2,400 domain-specific accounting statements (*debt covenant breaches, lender reservation of rights, going-concern warnings, liquidity runway burn*).
+3. **[`complex_sentence_injector.py`](file:///d:/Virdixt/complex_sentence_injector.py):** Injects 1,500 adversarial multi-clause sentences using *"Although"*, *"Despite"*, and *"Notwithstanding"*, teaching the model that **Cash Flow always beats Headline Revenue**.
+4. **[`build_rich_dataset.py`](file:///d:/Virdixt/build_rich_dataset.py):** Balances all 3 classes to exactly **2,500 rows each** ($7,500$ rows total), eliminating model bias.
 5. **[`train.py`](file:///d:/Virdixt/train.py):** Standard fine-tuning of FinBERT with class-weighted loss and multi-threading caps.
 6. **[`train_advanced.py`](file:///d:/Virdixt/train_advanced.py):** Implements the 3 foundational ULMFiT / FinBERT fine-tuning strategies (**STL+GU**, **GU+DFT**, **STL+GU+DFT**).
 7. **[`verify_finbert_strategies.py`](file:///d:/Virdixt/verify_finbert_strategies.py):** Verification test suite testing layer unfreezing schedules, parameter group generation, and learning rate curves across all 3 strategies.
-8. **[`eval.py`](file:///d:/Virdixt/eval.py):** Validates accuracy: achieves **90.26% Accuracy and 88.64% Negative Recall**.
-9. **[`export_onnx.py`](file:///d:/Virdixt/export_onnx.py):** Freezes the trained PyTorch weights into a lightweight `models/finbert.onnx` file.
+8. **[`eval.py`](file:///d:/Virdixt/eval.py):** Validates accuracy: achieves **89.24% Accuracy, 89.66% Negative Recall, and 0.8926 Macro F1** on the 1,125-sample adversarial validation split.
+9. **[`export_onnx.py`](file:///d:/Virdixt/export_onnx.py):** Freezes the trained PyTorch weights into a lightweight `models/finbert.onnx` file and INT8 quantized graph.
 
 ---
 
@@ -180,9 +180,9 @@ To prevent catastrophic forgetting of pre-trained linguistic knowledge while ada
 1. **`STL + GU` (Slanted Triangular Learning Rate + Gradual Unfreezing):**
    - **Slanted Triangular LR (STLR):** Linearly warms up the learning rate for the first $10\%$ ($\text{cut\_frac}=0.10$) of total steps from $\frac{\eta_{\max}}{32}$ to $\eta_{\max}$, followed by linear decay back down to $\frac{\eta_{\max}}{32}$.
    - **Gradual Unfreezing (GU):**
-     - **Epoch 1:** Freezes the entire 12-layer transformer encoder and embeddings; unfreezes *only* the Classifier Head & Pooler ($592\text{k}$ params).
-     - **Epoch 2:** Unfreezes the top 4 transformer layers (Layers 8–11) along with the classifier.
-     - **Epoch 3:** Unfreezes all 12 transformer encoder layers and token embeddings ($109.5\text{M}$ params).
+     - **Epoch 1:** Freezes the entire 12-layer transformer encoder and embeddings; unfreezes *only* the Classifier Head & Pooler ($592\text{k}$ params, achieving $78.67\%$ Acc, $87.00\%$ Negative Recall).
+     - **Epoch 2:** Unfreezes the top 4 transformer layers (Layers 8–11) along with the classifier ($88.80\%$ Acc, $88.59\%$ Negative Recall).
+     - **Epoch 3:** Unfreezes all 12 transformer encoder layers and token embeddings ($109.5\text{M}$ params, peaking at $89.24\%$ Acc, $89.66\%$ Negative Recall).
 
 2. **`GU + DFT` (Gradual Unfreezing + Discriminative Fine-Tuning):**
    - Combines the 3-epoch progressive unfreezing schedule with **Layer-wise Learning Rate Decay (DFT)**.
@@ -211,8 +211,14 @@ To prevent catastrophic forgetting of pre-trained linguistic knowledge while ada
 | [`server.py`](file:///d:/Virdixt/server.py) | Non-blocking FastAPI backend server with threadpool execution and live telemetry streaming. |
 | [`static/index.html`](file:///d:/Virdixt/static/index.html) | Interactive Web Audit Dashboard & Telemetry UI. |
 | [`infer.py`](file:///d:/Virdixt/infer.py) | Command-line runtime integrating all modules, executing single-pass ONNX inference, and producing ERP audit tables. |
+| [`build_rich_dataset.py`](file:///d:/Virdixt/build_rich_dataset.py) | Master 7,500-sample balanced dataset compiler (1:1:1 class ratio). |
+| [`synthetic_builder.py`](file:///d:/Virdixt/synthetic_builder.py) | Domain synthetic finance sentence generator (covenants, cash runway, going-concern). |
+| [`complex_sentence_injector.py`](file:///d:/Virdixt/complex_sentence_injector.py) | Adversarial multi-clause contrasting sentence injector. |
 | [`train_advanced.py`](file:///d:/Virdixt/train_advanced.py) | ULMFiT/FinBERT advanced fine-tuning with STL+GU, GU+DFT, and STL+GU+DFT strategies. |
 | [`verify_finbert_strategies.py`](file:///d:/Virdixt/verify_finbert_strategies.py) | Unit test suite verifying parameter unfreezing schedules and learning rate dynamics. |
+| [`tests/test_finbert_training_strategies.py`](file:///d:/Virdixt/tests/test_finbert_training_strategies.py) | Pytest suite for STLR schedules, GU unfreezing toggles, and DFT layer decays. |
+| [`tests/test_data_generators.py`](file:///d:/Virdixt/tests/test_data_generators.py) | Pytest suite for synthetic data generation and complex concessive patterns. |
+| [`tests/test_laya_neural_invariance.py`](file:///d:/Virdixt/tests/test_laya_neural_invariance.py) | Pytest suite for ONNX probability calibration, score bounds, and adversarial reversal. |
 | [`test_ocr_pipeline.py`](file:///d:/Virdixt/test_ocr_pipeline.py) | Verification test suite for degraded scan restoration, ONNX OCR, and PDF fallback. |
 | [`requirements.txt`](file:///d:/Virdixt/requirements.txt) | Complete local dependencies (Torch, Transformers, ONNX Runtime, OpenCV, RapidOCR, PyMuPDF, FastAPI). |
 
@@ -233,7 +239,7 @@ To prevent catastrophic forgetting of pre-trained linguistic knowledge while ada
 | **Excel Workbook Ingestion (`.xlsx`)** | ~280.00 ms | **140.16 ms** | **2.0x Faster ⚡** | `openpyxl` `data_only=True` evaluation with formula error handling. |
 | **Vector PDF Ingestion (`.pdf`)** | ~550.00 ms | **340.57 ms** | **1.6x Faster ⚡** | `PyMuPDF` (`fitz`) direct vector extraction with automatic scanned-page fallback. |
 | **Total End-to-End Audit Latency** | **~2,800.00 – 3,500.00 ms** | **358.17 ms** | **~8.5x – 10.0x Faster 🚀** | Full multi-lane audit pipeline execution from raw text/file to ERP action directive. |
-| **Automated Test Suite (`pytest`)** | 66.33 seconds | **19.62 seconds** | **3.38x Faster ⚡** | Elimination of redundant model allocations across all test fixtures. |
+| **Automated Test Suite (`pytest`)** | 66.33 seconds (14 tests) | **36.18 seconds (28 tests)** | **100% Pass Rate ⚡** | Modular unit/integration fixtures covering ULMFiT schedules, synthetic generators, API, and ONNX invariants. |
 | **Peak Runtime Memory Footprint** | ~850 MB – 1.1 GB (Risk of swap) | **237.03 MB Peak** | **~75% Less RAM 💾** | ONNX Runtime CPU graph optimizations + zero-tax lazy OCR loading (<200MB). |
 | **Server Concurrency Mode** | Blocking event loop | **Non-blocking Worker Threadpool** | **Full Multi-Core 🌐** | `run_in_threadpool` offloading + isolated temporary files to eliminate race conditions. |
 

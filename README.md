@@ -2,8 +2,9 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Model-FinBERT-blue?style=for-the-badge&logo=huggingface" />
-  <img src="https://img.shields.io/badge/Accuracy-90.26%25-brightgreen?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Macro_F1-0.9022-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Negative_Recall-89.66%25-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Macro_F1-0.8926-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Tests-28%20Passed-brightgreen?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Runtime-ONNX_%2B_FastAPI-purple?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Formats-PDF_%7C_DOCX_%7C_XLSX_%7C_CSV_%7C_IMG-orange?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
@@ -187,14 +188,20 @@ Virdixt/
 │   ├── styles.css              # Custom styling, responsive layout, & active states
 │   ├── app.js                  # Reactive state bridge via sessionStorage & Alpine.js
 │   └── alpine.min.js           # Vendored dependency for 100% offline/air-gapped operation
-├── tests/                       # Automated Test Suite (Pytest)
+├── tests/                       # Automated Test Suite (28 Tests Passing)
 │   ├── test_advise_integration.py # End-to-end decision advisor tests
 │   ├── test_api.py             # FastAPI REST endpoints test
 │   ├── test_completeness.py    # Signal completeness badge tests
-│   └── test_overrides.py       # Safety circuit-breaker override tests
+│   ├── test_overrides.py       # Safety circuit-breaker override tests
+│   ├── test_finbert_training_strategies.py # ULMFiT schedules (STLR, GU, DFT)
+│   ├── test_data_generators.py # Synthetic & complex sentence injector tests
+│   └── test_laya_neural_invariance.py # ONNX probability calibration & bounds
 ├── document_parser.py           # Master multi-format ingestion (PDF, DOCX, XLSX, CSV, IMG)
 ├── server.py                    # Non-blocking FastAPI backend server
 ├── infer.py                     # CLI runtime, FinBERT single-pass ONNX & ERP advisor
+├── build_rich_dataset.py        # Master 7,500-sample balanced dataset compiler
+├── synthetic_builder.py         # Domain synthetic finance sentence generator
+├── complex_sentence_injector.py # Adversarial multi-clause contrasting sentence injector
 ├── train.py                     # Custom PyTorch class-weighted fine-tuning script
 ├── train_advanced.py            # ULMFiT/FinBERT advanced fine-tuning (STL+GU, GU+DFT, STL+GU+DFT)
 ├── verify_finbert_strategies.py # Parameter schedule & LR dynamics verification suite

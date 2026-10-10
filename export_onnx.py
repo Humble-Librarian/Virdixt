@@ -23,10 +23,11 @@ console = Console()
 
 def main():
     parser = argparse.ArgumentParser(description="Export FinBERT to ONNX format")
+    parser.add_argument('--model_dir', type=str, default='./output_candidate', help='Path to source PyTorch model')
     parser.add_argument('--quantize', action='store_true', help='Quantize to INT8')
     args = parser.parse_args()
     
-    model_path = './output'
+    model_path = args.model_dir if os.path.exists(args.model_dir) else './output'
     output_dir = 'models'
     os.makedirs(output_dir, exist_ok=True)
     onnx_path = os.path.join(output_dir, 'finbert.onnx')

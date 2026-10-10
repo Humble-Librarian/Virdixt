@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 *.pyo
 output/
+output_candidate/
 models/
 *.onnx
 tmp_a/

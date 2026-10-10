@@ -28,6 +28,14 @@ from transformers import (
     TrainerCallback,
 )
 
+# Enable UTF-8 line buffering for Windows consoles & background task runners
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
+        sys.stderr.reconfigure(encoding="utf-8", line_buffering=True)
+    except Exception:
+        pass
+
 # Optimize thread allocation for CPU execution
 torch.set_num_threads(4)
 
@@ -270,13 +278,13 @@ def train_finbert(
     decay_factor: float = 0.95,
     output_dir: str = "./output_advanced",
 ):
-    print("=" * 80)
-    print(f"  FINBERT ADVANCED TRAINING: STRATEGY = [{strategy.upper()}]")
-    print(f"  Components Enabled:")
-    print(f"    • STL (Slanted Triangular LR) : {'YES' if 'stl' in strategy else 'NO (Constant/Cosine)'}")
-    print(f"    • GU  (Gradual Unfreezing)   : {'YES' if 'gu' in strategy else 'NO (All Unfrozen)'}")
-    print(f"    • DFT (Discriminative LR)    : {'YES' if 'dft' in strategy else 'NO (Uniform LR)'}")
-    print("=" * 80)
+    print("=" * 80, flush=True)
+    print(f"  FINBERT ADVANCED TRAINING: STRATEGY = [{strategy.upper()}]", flush=True)
+    print("  Components Enabled:", flush=True)
+    print(f"    * STL (Slanted Triangular LR) : {'YES' if 'stl' in strategy else 'NO (Constant/Cosine)'}", flush=True)
+    print(f"    * GU  (Gradual Unfreezing)   : {'YES' if 'gu' in strategy else 'NO (All Unfrozen)'}", flush=True)
+    print(f"    * DFT (Discriminative LR)    : {'YES' if 'dft' in strategy else 'NO (Uniform LR)'}", flush=True)
+    print("=" * 80, flush=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\n[1/5] Compute device: {device}")
@@ -375,25 +383,25 @@ def train_finbert(
 
                 if step_count % 30 == 0:
                     lr_sample = optimizer.param_groups[0]["lr"]
-                    print(f"    [Step {step_count:>3d}] Batch Loss: {loss.item() * grad_accum_steps:.4f} | LR: {lr_sample:.2e}")
+                    print(f"    [Step {step_count:>3d}] Batch Loss: {loss.item() * grad_accum_steps:.4f} | LR: {lr_sample:.2e}", flush=True)
 
         epoch_loss = running_loss / len(train_loader)
-        print(f"  -> Epoch {epoch + 1} Average Loss: {epoch_loss:.4f}")
+        print(f"  -> Epoch {epoch + 1} Average Loss: {epoch_loss:.4f}", flush=True)
 
         # 5. Validation Evaluation
         if val_loader:
             metrics = evaluate_model(model, val_loader, device)
-            print(f"  -> Validation Results: Acc={metrics['accuracy']*100:.2f}% | F1={metrics['macro_f1']:.4f} | Neg-Recall={metrics['negative_recall']*100:.2f}%")
+            print(f"  -> Validation Results: Acc={metrics['accuracy']*100:.2f}% | F1={metrics['macro_f1']:.4f} | Neg-Recall={metrics['negative_recall']*100:.2f}%", flush=True)
             
             if metrics["macro_f1"] > best_f1:
                 best_f1 = metrics["macro_f1"]
                 os.makedirs(output_dir, exist_ok=True)
                 model.save_pretrained(output_dir)
                 tokenizer.save_pretrained(output_dir)
-                print(f"  ⭐ New Best Model Saved (Macro-F1: {best_f1:.4f}) to {output_dir}")
+                print(f"  [BEST] New Best Model Saved (Macro-F1: {best_f1:.4f}) to {output_dir}", flush=True)
 
     total_time = time.time() - start_time
-    print(f"\n[DONE] Training complete in {total_time / 60:.2f} minutes. Best Macro-F1: {best_f1:.4f}")
+    print(f"\n[DONE] Training complete in {total_time / 60:.2f} minutes. Best Macro-F1: {best_f1:.4f}", flush=True)
     return best_f1
 
 

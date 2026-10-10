@@ -92,24 +92,24 @@ flowchart TD
 
 ## 📊 Benchmark & Accuracy Metrics
 
-Fine-tuned on a balanced 6,300-row master dataset ($1:1:1$ Negative / Neutral / Positive) assembled from authentic market feeds, institutional accounting statements, and adversarial multi-clause sentences:
+Fine-tuned on the Phase 2 enriched 7,500-row master dataset ($1:1:1$ Negative / Neutral / Positive) assembled from authentic market feeds, institutional accounting statements, and adversarial multi-clause sentences using the **`STL + GU + DFT`** ULMFiT triad:
 
 | Evaluation Metric | Value | Baseline Comparison |
 | :--- | :---: | :--- |
-| **Validation Accuracy** | **90.26%** | $+15.26\%$ over unbalanced baseline |
-| **Macro F1 Score** | **0.9022** | $+0.221$ over generic classifiers |
-| **Negative Recall** | **88.64%** | **$\uparrow$ from 9.5%** (Prevents missed insolvency signals) |
-| **Macro Precision** | **0.9027** | High confidence across all classes |
+| **Validation Accuracy** | **89.24%** | $+14.24\%$ over unbalanced baseline on hard adversarial data |
+| **Macro F1 Score** | **0.8926** | $+0.211$ over generic classifiers |
+| **Negative Recall (Distress Safety)** | **89.66%** | **$\uparrow$ from 9.5%** (Prevents missed insolvency signals) |
+| **Macro Precision** | **0.8927** | High confidence across all 3 classes |
 | **Inference Latency (ONNX CPU)** | **~5–10 ms** | Warm single-pass resident model throughput |
 | **Inference Latency (ONNX GPU)** | **~1.5 ms** | Batch acceleration available |
 | **RAM Footprint** | **< 200 MB** | 100% stable on 4 GB RAM systems |
 
-### Validation Confusion Matrix (945 Samples)
+### Validation Confusion Matrix (1,125 Hard Adversarial Samples)
 ```
                  Pred Negative   Pred Neutral   Pred Positive
-Actual negative:     281 ✅           19             17
-Actual neutral :      26            269 ✅           15
-Actual positive:       7              8            303 ✅
+Actual negative:     338 ✅           26             13
+Actual neutral :      21            350 ✅           22
+Actual positive:      20             19            316 ✅
 ```
 
 ---
@@ -156,7 +156,7 @@ python verify_finbert_strategies.py
 
 ### 5. Run the Full Test Suite
 ```bash
-# Run 14 integration, API, completeness, and override tests
+# Run 28 integration, API, ULMFiT, data generator, and invariance tests
 python -m pytest tests/
 
 # Run OCR & optical image restoration verification test

@@ -258,7 +258,7 @@ python train_advanced.py --strategy stl_gu_dft --epochs 3 --base_lr 2e-5 --decay
 # 5. Verify FinBERT Strategy Schedules & Learning Rate Dynamics
 python verify_finbert_strategies.py
 
-# 6. Run Pytest Suite (14 Tests)
+# 6. Run Pytest Suite (28 Tests)
 python -m pytest tests/
 
 # 7. Run OCR & Image Restoration Verification Test Suite

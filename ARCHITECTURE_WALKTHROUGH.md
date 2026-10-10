@@ -165,9 +165,33 @@ flowchart LR
 2. **[`synthetic_builder.py`](file:///d:/Virdixt/synthetic_builder.py):** Generates 1,500 domain-specific accounting statements (*impairment charges, debt covenant headroom, EBITDA margin*).
 3. **[`complex_sentence_injector.py`](file:///d:/Virdixt/complex_sentence_injector.py):** Injects 750 complex sentences using *"Although"*, *"Despite"*, and *"Notwithstanding"*, teaching the model that **Cash Flow always beats Revenue**.
 4. **[`build_rich_dataset.py`](file:///d:/Virdixt/build_rich_dataset.py):** Balances all 3 classes to exactly **2,100 rows each**, eliminating model bias.
-5. **[`train.py`](file:///d:/Virdixt/train.py):** Fine-tunes FinBERT with class-weighted loss and multi-threading caps.
-6. **[`eval.py`](file:///d:/Virdixt/eval.py):** Validates accuracy: achieves **90.26% Accuracy and 88.64% Negative Recall**.
-7. **[`export_onnx.py`](file:///d:/Virdixt/export_onnx.py):** Freezes the trained PyTorch weights into a lightweight `models/finbert.onnx` file.
+5. **[`train.py`](file:///d:/Virdixt/train.py):** Standard fine-tuning of FinBERT with class-weighted loss and multi-threading caps.
+6. **[`train_advanced.py`](file:///d:/Virdixt/train_advanced.py):** Implements the 3 foundational ULMFiT / FinBERT fine-tuning strategies (**STL+GU**, **GU+DFT**, **STL+GU+DFT**).
+7. **[`verify_finbert_strategies.py`](file:///d:/Virdixt/verify_finbert_strategies.py):** Verification test suite testing layer unfreezing schedules, parameter group generation, and learning rate curves across all 3 strategies.
+8. **[`eval.py`](file:///d:/Virdixt/eval.py):** Validates accuracy: achieves **90.26% Accuracy and 88.64% Negative Recall**.
+9. **[`export_onnx.py`](file:///d:/Virdixt/export_onnx.py):** Freezes the trained PyTorch weights into a lightweight `models/finbert.onnx` file.
+
+---
+
+### 🔬 Advanced FinBERT Fine-Tuning Strategies (ULMFiT / Araci 2019)
+
+To prevent catastrophic forgetting of pre-trained linguistic knowledge while adapting deep financial representations, `train_advanced.py` provides 3 research-backed training strategies:
+
+1. **`STL + GU` (Slanted Triangular Learning Rate + Gradual Unfreezing):**
+   - **Slanted Triangular LR (STLR):** Linearly warms up the learning rate for the first $10\%$ ($\text{cut\_frac}=0.10$) of total steps from $\frac{\eta_{\max}}{32}$ to $\eta_{\max}$, followed by linear decay back down to $\frac{\eta_{\max}}{32}$.
+   - **Gradual Unfreezing (GU):**
+     - **Epoch 1:** Freezes the entire 12-layer transformer encoder and embeddings; unfreezes *only* the Classifier Head & Pooler ($592\text{k}$ params).
+     - **Epoch 2:** Unfreezes the top 4 transformer layers (Layers 8–11) along with the classifier.
+     - **Epoch 3:** Unfreezes all 12 transformer encoder layers and token embeddings ($109.5\text{M}$ params).
+
+2. **`GU + DFT` (Gradual Unfreezing + Discriminative Fine-Tuning):**
+   - Combines the 3-epoch progressive unfreezing schedule with **Layer-wise Learning Rate Decay (DFT)**.
+   - Lower layers (general lexical and syntactic representations) are tuned with significantly smaller learning rates than higher task-specific layers:
+     $$\eta^{l} = \eta^{L} \cdot \xi^{(L - l)}$$
+     where $\xi = 0.95$ is the decay multiplier per descending layer ($\text{Classifier} = 2.0\times 10^{-5} \to \text{Embeddings} = 1.03\times 10^{-5}$).
+
+3. **`STL + GU + DFT` (Full Triad):**
+   - Combines all three techniques simultaneously: dynamic per-layer learning rates (DFT), progressive layer unfreezing across epochs (GU), and slanted triangular learning rate scheduling per parameter group (STLR).
 
 ---
 
@@ -187,6 +211,8 @@ flowchart LR
 | [`server.py`](file:///d:/Virdixt/server.py) | Non-blocking FastAPI backend server with threadpool execution and live telemetry streaming. |
 | [`static/index.html`](file:///d:/Virdixt/static/index.html) | Interactive Web Audit Dashboard & Telemetry UI. |
 | [`infer.py`](file:///d:/Virdixt/infer.py) | Command-line runtime integrating all modules, executing single-pass ONNX inference, and producing ERP audit tables. |
+| [`train_advanced.py`](file:///d:/Virdixt/train_advanced.py) | ULMFiT/FinBERT advanced fine-tuning with STL+GU, GU+DFT, and STL+GU+DFT strategies. |
+| [`verify_finbert_strategies.py`](file:///d:/Virdixt/verify_finbert_strategies.py) | Unit test suite verifying parameter unfreezing schedules and learning rate dynamics. |
 | [`test_ocr_pipeline.py`](file:///d:/Virdixt/test_ocr_pipeline.py) | Verification test suite for degraded scan restoration, ONNX OCR, and PDF fallback. |
 | [`requirements.txt`](file:///d:/Virdixt/requirements.txt) | Complete local dependencies (Torch, Transformers, ONNX Runtime, OpenCV, RapidOCR, PyMuPDF, FastAPI). |
 
@@ -226,9 +252,15 @@ python infer.py --file "data/sample_reports/corporate_filing.xlsx"
 # 3. Audit raw corporate text directly
 python infer.py --text "Although revenue rose by 14%, cash flow turned deeply negative."
 
-# 4. Run Pytest Suite (14 Tests)
+# 4. Train FinBERT with Advanced ULMFiT Strategies
+python train_advanced.py --strategy stl_gu_dft --epochs 3 --base_lr 2e-5 --decay_factor 0.95
+
+# 5. Verify FinBERT Strategy Schedules & Learning Rate Dynamics
+python verify_finbert_strategies.py
+
+# 6. Run Pytest Suite (14 Tests)
 python -m pytest tests/
 
-# 5. Run OCR & Image Restoration Verification Test Suite
+# 7. Run OCR & Image Restoration Verification Test Suite
 python test_ocr_pipeline.py
 ```

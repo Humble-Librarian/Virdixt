@@ -22,7 +22,11 @@ COMPLEX_NEGATIVE_PATTERNS = [
     "Despite settling the protracted patent litigation for {amount}, lingering operational disruptions and lost exclusive market rights continue to depress forward cash flows.",
     "While domestic sales demonstrated resilient growth of {rev_pct}, severe international currency devaluation and export tariffs wiped out operating gains.",
     "Although customer acquisition climbed {rev_pct}, average revenue per user deteriorated by {drop_pct}, signaling unsustainable promotional discounting.",
-    "Notwithstanding top-line expansion across cloud divisions, mounting hardware depreciation and high debt servicing costs caused cash reserves to decline {drop_pct}."
+    "Notwithstanding top-line expansion across cloud divisions, mounting hardware depreciation and high debt servicing costs caused cash reserves to decline {drop_pct}.",
+    "Although quarterly bookings reached {amount}, negative operating cash flow drained cash runway to under 90 days, prompting lenders to issue a covenant breach notice.",
+    "Despite gross billings expanding by {rev_pct}, persistent EBITDA losses of {amount} exhausted available credit line headroom and prompted debt restructuring talks.",
+    "While management highlighted {rev_pct} top-line growth, accounts payable aged past 90 days surged {drop_pct}, forcing trade creditors to demand cash-in-advance terms.",
+    "Notwithstanding {amount} in top-line contracts, excessive debt leverage and imminent loan maturities forced the board to initiate strategic bankruptcy alternatives."
 ]
 
 # Class 2: Complex Positives (Looks negative in subordinate clause, but core operational reality is positive)

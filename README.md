@@ -138,7 +138,23 @@ python infer.py --file "data/sample_reports/corporate_filing.xlsx"
 python infer.py --text "Although revenue rose by 14%, cash flow turned deeply negative." --exposure 500000
 ```
 
-### 4. Run the Full Test Suite
+### 4. Advanced FinBERT Fine-Tuning (ULMFiT Strategies)
+Train FinBERT using the 3 foundational fine-tuning strategies from Dogu Araci (2019) and Howard & Ruder (2018):
+```bash
+# 1. Slanted Triangular Learning Rate + Gradual Unfreezing
+python train_advanced.py --strategy stl_gu --epochs 3 --base_lr 2e-5
+
+# 2. Gradual Unfreezing + Discriminative Fine-Tuning (Layer-wise LR Decay xi=0.95)
+python train_advanced.py --strategy gu_dft --epochs 3 --decay_factor 0.95
+
+# 3. Full Triad (STL + GU + DFT)
+python train_advanced.py --strategy stl_gu_dft --epochs 3 --base_lr 2e-5 --decay_factor 0.95
+
+# Verify parameter unfreezing schedules and learning rate dynamics
+python verify_finbert_strategies.py
+```
+
+### 5. Run the Full Test Suite
 ```bash
 # Run 14 integration, API, completeness, and override tests
 python -m pytest tests/
@@ -180,6 +196,8 @@ Virdixt/
 ├── server.py                    # Non-blocking FastAPI backend server
 ├── infer.py                     # CLI runtime, FinBERT single-pass ONNX & ERP advisor
 ├── train.py                     # Custom PyTorch class-weighted fine-tuning script
+├── train_advanced.py            # ULMFiT/FinBERT advanced fine-tuning (STL+GU, GU+DFT, STL+GU+DFT)
+├── verify_finbert_strategies.py # Parameter schedule & LR dynamics verification suite
 ├── eval.py                      # Comprehensive classification report & metrics
 ├── export_onnx.py               # Freezes PyTorch weights into optimized ONNX graph
 ├── test_ocr_pipeline.py         # Verification test suite for degraded scan OCR

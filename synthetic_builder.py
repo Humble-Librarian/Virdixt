@@ -31,7 +31,12 @@ NEGATIVE_TEMPLATES = [
     "{company} breached senior debt leverage covenants, triggering emergency credit renegotiations with lenders.",
     "{company} suspended quarterly common share dividend payments to preserve deteriorating liquidity reserves.",
     "{company} was ordered to pay {amount} in regulatory penalties following an antitrust compliance investigation.",
-    "Order cancellations increased {pct} across core segments, forcing {company} to reduce operational capacity."
+    "Order cancellations increased {pct} across core segments, forcing {company} to reduce operational capacity.",
+    "{company}'s external auditors issued a going-concern warning citing rapid cash depletion and negative working capital of {amount}.",
+    "Lenders issued a formal reservation of rights letter after {company} failed to meet its minimum debt service coverage ratio.",
+    "Operating cash burn accelerated to {amount} per month, reducing estimated liquidity runway to less than one quarter.",
+    "{company} hired debt advisory specialists to evaluate restructuring alternatives including a debt-for-equity recapitalization.",
+    "Vendor trade credit insurers withdrew coverage for {company}, requiring immediate cash-in-advance payment terms from suppliers."
 ]
 
 POSITIVE_TEMPLATES = [

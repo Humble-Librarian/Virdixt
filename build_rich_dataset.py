@@ -16,8 +16,8 @@ from complex_sentence_injector import generate_complex_samples
 def build_master_dataset(
     output_dir: str = "./data",
     real_target_per_class: int = 1200,
-    synthetic_per_class: int = 600,
-    complex_per_class: int = 300
+    synthetic_per_class: int = 800,
+    complex_per_class: int = 500
 ):
     os.makedirs(output_dir, exist_ok=True)
     print("=" * 70)

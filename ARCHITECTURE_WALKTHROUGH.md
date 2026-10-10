@@ -178,17 +178,17 @@ flowchart LR
 To prevent catastrophic forgetting of pre-trained linguistic knowledge while adapting deep financial representations, `train_advanced.py` provides 3 research-backed training strategies:
 
 1. **`STL + GU` (Slanted Triangular Learning Rate + Gradual Unfreezing):**
-   - **Slanted Triangular LR (STLR):** Linearly warms up the learning rate for the first $10\%$ ($\text{cut\_frac}=0.10$) of total steps from $\frac{\eta_{\max}}{32}$ to $\eta_{\max}$, followed by linear decay back down to $\frac{\eta_{\max}}{32}$.
+   - **Slanted Triangular LR (STLR):** Linearly warms up the learning rate for the first 10% (`cut_frac = 0.10`) of total steps from $\frac{\eta_{\max}}{32}$ to $\eta_{\max}$, followed by linear decay back down to $\frac{\eta_{\max}}{32}$.
    - **Gradual Unfreezing (GU):**
-     - **Epoch 1:** Freezes the entire 12-layer transformer encoder and embeddings; unfreezes *only* the Classifier Head & Pooler ($592\text{k}$ params, achieving $78.67\%$ Acc, $87.00\%$ Negative Recall).
-     - **Epoch 2:** Unfreezes the top 4 transformer layers (Layers 8–11) along with the classifier ($88.80\%$ Acc, $88.59\%$ Negative Recall).
-     - **Epoch 3:** Unfreezes all 12 transformer encoder layers and token embeddings ($109.5\text{M}$ params, peaking at $89.24\%$ Acc, $89.66\%$ Negative Recall).
+     - **Epoch 1:** Freezes the entire 12-layer transformer encoder and embeddings; unfreezes *only* the Classifier Head & Pooler (592,899 params, achieving 78.67% Acc, 87.00% Negative Recall).
+     - **Epoch 2:** Unfreezes the top 4 transformer layers (Layers 8–11) along with the classifier (28.9M params, achieving 88.80% Acc, 88.59% Negative Recall).
+     - **Epoch 3:** Unfreezes all 12 transformer encoder layers and token embeddings (109.5M params, peaking at 89.24% Acc, 89.66% Negative Recall).
 
 2. **`GU + DFT` (Gradual Unfreezing + Discriminative Fine-Tuning):**
    - Combines the 3-epoch progressive unfreezing schedule with **Layer-wise Learning Rate Decay (DFT)**.
    - Lower layers (general lexical and syntactic representations) are tuned with significantly smaller learning rates than higher task-specific layers:
      $$\eta^{l} = \eta^{L} \cdot \xi^{(L - l)}$$
-     where $\xi = 0.95$ is the decay multiplier per descending layer ($\text{Classifier} = 2.0\times 10^{-5} \to \text{Embeddings} = 1.03\times 10^{-5}$).
+     where $\xi = 0.95$ is the decay multiplier per descending layer ($\text{Classifier } = 2.0\times 10^{-5} \to \text{Embeddings } = 1.03\times 10^{-5}$).
 
 3. **`STL + GU + DFT` (Full Triad):**
    - Combines all three techniques simultaneously: dynamic per-layer learning rates (DFT), progressive layer unfreezing across epochs (GU), and slanted triangular learning rate scheduling per parameter group (STLR).

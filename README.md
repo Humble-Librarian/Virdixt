@@ -1,12 +1,12 @@
-# Virdixt — Multimodal Financial Sentiment & Laya System-1 Decision Engine
+# Virdixt — Multimodal Financial Sentiment, Acoustic Forensics & Laya System-1 Decision Engine
 
 <p align="center">
   <img src="https://img.shields.io/badge/Model-FinBERT-blue?style=for-the-badge&logo=huggingface" />
   <img src="https://img.shields.io/badge/Negative_Recall-89.66%25-brightgreen?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Macro_F1-0.8926-brightgreen?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Tests-28%20Passed-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Tests-35%20Passed-brightgreen?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Runtime-ONNX_%2B_FastAPI-purple?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Formats-PDF_%7C_DOCX_%7C_XLSX_%7C_CSV_%7C_IMG-orange?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Formats-PDF_%7C_DOCX_%7C_XLSX_%7C_CSV_%7C_IMG_%7C_WAV-orange?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
@@ -14,7 +14,7 @@
 
 ## 📌 Executive Summary
 
-**Virdixt** is an air-gapped, enterprise-grade financial intelligence and automated risk-routing engine. Built on a fine-tuned **FinBERT** backbone and augmented with **Laya System-1 Decision Primitives**, Virdixt ingests unstructured enterprise documents (**PDFs**, **scanned receipts**, **Word DOCX**, **Excel workbooks**, **CSVs**, and **Images**), recovers degraded scans via OpenCV image restoration, parses financial charts, resolves complex multi-clause financial disclosures, and routes high-risk counterparties to automated ERP policy actions in sub-10 milliseconds.
+**Virdixt** is an air-gapped, enterprise-grade financial intelligence and automated risk-routing engine. Built on a fine-tuned **FinBERT** backbone and augmented with **Laya System-1 Decision Primitives**, Virdixt ingests unstructured enterprise documents (**PDFs**, **scanned receipts**, **Word DOCX**, **Excel workbooks**, **CSVs**, **Images**, and **earnings call audio**), recovers degraded scans via OpenCV image restoration, parses financial charts, resolves complex multi-clause financial disclosures, **detects executive vocal stress and cross-modal deception in unscripted earnings call Q&A**, and routes high-risk counterparties to automated ERP policy actions in sub-10 milliseconds.
 
 > 📖 **Internal Architecture Walkthrough:** For a file-by-file visual breakdown, interactive dependency matrices, and step-by-step lifecycle explanations, see **[`ARCHITECTURE_WALKTHROUGH.md`](ARCHITECTURE_WALKTHROUGH.md)**.
 
@@ -26,14 +26,18 @@
 * **🔍 Zero-Tax OCR & OpenCV Optical Image Restoration:** Dual-path ingestion:
   - **Fast Vector Path (<5ms, 0 MB RAM):** Uses `PyMuPDF` (`fitz`) for clean digital PDFs.
   - **Degraded Scan Fallback:** Automatically detects scanned/blurry pages, applies **CLAHE contrast equalization, bilateral edge-preserving denoising, morphological deskewing, and unsharp masking**, then extracts structured text via lightweight **RapidOCR ONNX** (<150MB RAM).
-* **🔀 5-Lane Composite Fusion & Rule Engine (`nlp/fusion.py`):** Synthesizes intelligence across **Global FinBERT Sentiment**, **5-Aspect ABSA**, **Forensic Accounting (Altman Z / Beneish M / Piotroski F)**, **RST Discourse Masking**, and **Linguistic Hedging / Gunning-Fog Index**.
+* **🎙️ Unscripted Earnings Call Acoustic Stress Detection (Path #5):**
+  - **Acoustic Prosody Engine (`audio/prosody.py`):** Extracts clinical-grade vocal biomarkers — **F0 pitch shift**, **jitter (micro-frequency perturbation)**, **shimmer**, **HNR dysphonia**, and **speech rate** — via **openSMILE eGeMAPSv02** C++ backend (<30MB RAM). Supports speaker baseline enrollment and Z-score normalization for per-executive anomaly tracking.
+  - **Earnings Call Transcriber (`audio/transcribe.py`):** CPU-optimized speech-to-text using **faster-whisper** (CTranslate2 INT8, AVX2) with **Silero VAD**. Role-classification state machine segments dialogue into `OPERATOR` → `ANALYST_QUESTION` → `EXECUTIVE_ANSWER` turns and measures **cognitive hesitation latency** (inter-turn silence).
+  - **Cross-Modal Dissonance Index (`audio/dissonance.py`):** Fuses acoustic stress, hesitation latency, FinBERT sentiment, and linguistic hedging into a unified **CMDI score (0–10)** with forensic tier classification: `CONGRUENT_CALM` → `MODERATE_TENSION` → `HIGH_DISSONANCE` → `ACUTE_DECEPTION_RISK`. Detects when an executive's voice betrays distress while their words project confidence.
+* **🔀 6-Lane Composite Fusion & Rule Engine (`nlp/fusion.py`):** Synthesizes intelligence across **Global FinBERT Sentiment**, **5-Aspect ABSA**, **Forensic Accounting (Altman Z / Beneish M / Piotroski F)**, **RST Discourse Masking**, **Linguistic Hedging / Gunning-Fog Index**, and **Acoustic Prosody & Vocal Stress (Lane 6)**. Multimodal weight distributions dynamically rebalance when audio evidence is provided.
 * **⚡ Single-Pass Neural Execution:** `LayaSystem1` computes calibrated probabilities, sentiment choices, continuous distress scores, and NOUL metrics in **1 single forward pass**, cutting CPU inference latency by $>70\%$.
 * **Aspect-Based Financial Sentiment Analysis (ABSA):** Multi-entity token decomposition evaluating distinct operational aspects (`Top-Line & Growth`, `Cost & Margin Structure`, `Liquidity & Cash Burn`, `Debt & Solvency`, `Audit & Governance Risk`) independently.
 * **Linguistic Deception & Executive Hedging Audit:** Computational linguistics engine measuring Epistemic Uncertainty scores, Agentless Passive Voice Evasion, Gunning-Fog Obfuscation indexes, and corporate euphemisms with memoized syllable parsing.
 * **Rhetorical Structure Theory (RST) Concessive Parsing:** Identifies rhetorical masking by separating superficial *Satellites* (buffer clauses) from core *Nuclei* (dominant economic realities).
 * **Deterministic Quantitative Forensic Accounting:** Microsecond calculations of institutional solvency benchmarks (**Altman Z-Score**, **Beneish M-Score**, **Piotroski F-Score**) with zero external dependencies.
 * **Deterministic Chart-to-Table Vision Subsystem:** Detects financial graphs, extracts underlying tables, and computes exact percentage deltas to inject concessive commentary without visual hallucination.
-* **Hierarchical Rule-Based Escalation & Circuit Breakers (`apply_overrides`):** Combines neural FinBERT predictions with deterministic short-circuit vetoes (e.g., Altman Z in *Distress Zone* forces unconditional escalation to `CRITICAL` / `FREEZE_PURCHASE_ORDERS`; Extreme Hedging language forces `WARNING`).
+* **Hierarchical Rule-Based Escalation & Circuit Breakers (`apply_overrides`):** Combines neural FinBERT predictions with deterministic short-circuit vetoes (e.g., Altman Z in *Distress Zone* forces unconditional escalation to `CRITICAL` / `FREEZE_PURCHASE_ORDERS`; Extreme Hedging language forces `WARNING`; **Acute Vocal Dissonance (CMDI ≥ 5.0) forces `CRITICAL` escalation; High Vocal Dissonance (CMDI ≥ 3.0) forces `WARNING`**).
 * **Document Completeness Engine (`evaluate_completeness`):** Audits signal availability across word counts, missing financial statements, and aspect coverage to assign institutional confidence badges (`FULL`, `PARTIAL`, `THIN`).
 * **Financial Exposure & Priority Ranking:** Computes risk-adjusted dollar exposure ($\text{Priority} = \frac{\text{Distress Score}}{100} \times \text{Exposure Value}$) for enterprise triage.
 * **Laya Open-Weights System-1 Primitives:**
@@ -41,7 +45,7 @@
   * **`Score`:** Continuous Financial Distress Index $[0.0, 100.0]$ ($0 = \text{Peak Solvency}, 100 = \text{Imminent Distress}$).
   * **`Noul`:** Calibrated probability propositions ($P(\text{Liquidity Distress})$, $P(\text{Covenant Breach})$, $P(\text{Growth Momentum})$).
 * **Automated ERP Policy Engine (`POLICY_TABLE`):** Strict deterministic mapping from risk grades to exposure tiers (`TIER_1_SAFE` to `TIER_4_BLOCKED`), policy action flags (`FREEZE_PURCHASE_ORDERS`, `FLAG_FOR_REVIEW`, `PROCEED_NORMAL`), and actionable operational directives.
-* **🔒 100% Air-Gapped / Zero-Cloud Leakage:** Entire frontend (including `alpine.min.js`) is vendored locally. Operates entirely offline on standard CPU/GPU using native ONNX runtimes. Zero data ever leaves the local machine.
+* **🔒 100% Air-Gapped / Zero-Cloud Leakage:** Entire frontend (including `alpine.min.js`) is vendored locally. Operates entirely offline on standard CPU using native ONNX and CTranslate2 INT8 runtimes. Zero data ever leaves the local machine.
 
 ---
 
@@ -53,7 +57,7 @@ flowchart TD
         INPUT[Document: .pdf / .docx / .xlsx / .csv / .txt / .png] --> PARSE[Universal DocumentParser]
         PARSE -->|Digital PDF / DOCX| PRUNE[Anchor Token Pruner]
         PARSE -->|Scanned / Blurry Scan| ENHANCE[OpenCV Image Restorer: CLAHE + Bilateral + Deskew]
-        ENHANCE --> OCR[RapidOCR ONNX Engine <150MB RAM]
+        ENHANCE --> OCR[RapidOCR ONNX Engine]
         OCR --> PRUNE
         PARSE -->|Spreadsheet / Balances| FOR_ENG[Forensic Accounting Engine]
         PARSE -->|Embedded Charts| DETECT[Florence-2 Chart Detector]
@@ -65,26 +69,39 @@ flowchart TD
         DELTA -->|Concessive Sentence Injection| PRUNE
     end
 
-    subgraph AUDITS["🧠 3. 5-LANE ADVANCED NLP & FORENSIC AUDITS"]
+    subgraph AUDIO["🎙️ 3. ACOUSTIC FORENSIC ENGINE"]
+        AUDIO_IN[Earnings Call Audio: .wav / .mp3] --> WHISPER[faster-whisper INT8 Transcriber + Silero VAD]
+        WHISPER --> TURNS[Turn Role Classifier: Operator / Analyst / Executive]
+        WHISPER --> LATENCY[Hesitation Latency Engine]
+        AUDIO_IN --> SMILE[openSMILE eGeMAPSv02 Prosody: F0 / Jitter / Shimmer / HNR]
+        SMILE --> STRESS[Speaker Baseline Z-Score Stress Scorer]
+        STRESS --> CMDI[Cross-Modal Dissonance Index]
+        LATENCY --> CMDI
+        TURNS --> CMDI
+    end
+
+    subgraph AUDITS["🧠 4. 6-LANE ADVANCED NLP & FORENSIC AUDITS"]
         PRUNE --> ABSA[ABSA: 5 Operational Aspects]
         PRUNE --> HEDGE[Hedging & Deception Detector]
         PRUNE --> DISC[RST Concessive Discourse Parser]
-        FOR_ENG --> FUSION[5-Lane Composite Fusion Engine]
+        FOR_ENG --> FUSION[6-Lane Composite Fusion Engine]
         ABSA --> FUSION
         HEDGE --> FUSION
         DISC --> FUSION
+        CMDI -->|Lane 6: Acoustic Stress| FUSION
     end
 
-    subgraph DECISION["⚡ 4. LAYA SYSTEM-1 RUNTIME (ONNX / C++)"]
+    subgraph DECISION["⚡ 5. LAYA SYSTEM-1 RUNTIME"]
         PRUNE --> FINBERT[FinBERT Single-Pass ONNX Engine]
         FINBERT --> LAYA[Laya System-1 Primitives]
         LAYA --> FUSION
         FUSION --> ERP[Financial Advisor & Policy Engine]
-        ERP --> ACTION[Policy Action: FREEZE_PURCHASE_ORDERS / PROCEED]
+        ERP --> ACTION[Policy Action: FREEZE / REVIEW / PROCEED]
     end
 
     style INGESTION fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4
     style VISION fill:#181825,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4
+    style AUDIO fill:#181825,stroke:#f38ba8,stroke-width:2px,color:#cdd6f4
     style AUDITS fill:#181825,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4
     style DECISION fill:#11111b,stroke:#a6e3a1,stroke-width:2px,color:#cdd6f4
 ```
@@ -139,9 +156,11 @@ Actual positive:      20             19            316 ✅
 | **Quantitative Forensic Accounting** | ~2.10 ms / doc | **0.456 ms / doc** | **4.6x Faster ⚡** | Deterministic balance sheet arithmetic (**Altman Z-Score**, **Beneish M-Score**, **Piotroski F-Score**) with zero external dependencies. |
 | **Aspect-Based Sentiment (ABSA)** | ~950.00 ms (repeated passes) | **229.83 ms (single pass)** | **4.1x Faster ⚡** | Evaluates all 5 operational aspects in a single pass without re-running redundant `choice()` and `score()` sub-calls. |
 | **Vector PDF Ingestion (`.pdf`)** | ~550.00 ms | **340.57 ms** | **1.6x Faster ⚡** | `PyMuPDF` (`fitz`) direct vector extraction with automatic scanned-page fallback. |
-| **Total End-to-End Audit Latency** | **~2,800 – 3,500 ms** | **358.17 ms** | **~8.5x – 10.0x Faster 🚀** | Full multi-lane audit pipeline execution from raw text/file to ERP action directive. |
-| **Automated Test Suite (`pytest`)** | 66.33 seconds (14 tests) | **36.18 seconds (28 tests)** | **100% Pass Rate ⚡** | Modular unit/integration fixtures covering ULMFiT schedules, synthetic generators, API, and ONNX invariants. |
-| **Peak Runtime Memory Footprint** | ~850 MB – 1.1 GB | **237.03 MB Peak** | **~75% Less RAM 💾** | ONNX Runtime CPU graph optimizations + zero-tax lazy OCR loading (<200MB). |
+| **Acoustic Prosody (openSMILE)** | — | **<50 ms / segment** | — | openSMILE eGeMAPSv02 C++ extraction (<30 MB RAM), speaker baseline enrollment, Z-score normalization. |
+| **Whisper Transcription (INT8)** | — | **~2–4 s / minute** | — | faster-whisper `small.en` CTranslate2 INT8 on AVX2, Silero VAD, numpy-based audio decoding (no PyAV). |
+| **Total End-to-End Audit Latency** | **~2,800 – 3,500 ms** | **358.17 ms** | **~8.5x – 10.0x Faster 🚀** | Full multi-lane text audit pipeline execution from raw text/file to ERP action directive. |
+| **Automated Test Suite (`pytest`)** | 66.33 seconds (14 tests) | **7.40 seconds (35 tests)** | **100% Pass Rate ⚡** | Modular unit/integration fixtures covering ULMFiT schedules, synthetic generators, audio prosody, CMDI, and ONNX invariants. |
+| **Peak Runtime Memory Footprint** | ~850 MB – 1.1 GB | **~750 MB Peak (with audio)** | **~30% Less RAM 💾** | ONNX Runtime + CTranslate2 INT8 graph optimizations + zero-tax lazy OCR loading. |
 
 ---
 
@@ -169,7 +188,29 @@ python infer.py --file "data/sample_reports/corporate_filing.xlsx"
 python infer.py --text "Although revenue rose by 14%, cash flow turned deeply negative." --exposure 500000
 ```
 
-### 4. Advanced FinBERT Fine-Tuning (ULMFiT Strategies)
+### 4. Earnings Call Audio Analysis (Path #5)
+```python
+from audio import AcousticStressExtractor, EarningsCallTranscriber, CrossModalDissonanceEngine
+
+# 1. Transcribe & segment the earnings call Q&A
+transcriber = EarningsCallTranscriber(model_size="small.en", compute_type="int8")
+turns = transcriber.transcribe("earnings_call_q4.wav")
+
+# 2. Analyze cross-modal dissonance per executive response
+cmdi_engine = CrossModalDissonanceEngine()
+for turn in turns:
+    if turn.role == "EXECUTIVE_ANSWER":
+        result = cmdi_engine.evaluate_turn(
+            audio_data="earnings_call_q4.wav",
+            text=turn.text,
+            hesitation_latency=turn.hesitation_latency,
+        )
+        print(f"CMDI: {result.cmdi_score}/10 — {result.dissonance_tier}")
+        for flag in result.forensic_flags:
+            print(f"  ⚠ {flag}")
+```
+
+### 5. Advanced FinBERT Fine-Tuning (ULMFiT Strategies)
 Train FinBERT using the 3 foundational fine-tuning strategies from Dogu Araci (2019) and Howard & Ruder (2018):
 ```bash
 # 1. Slanted Triangular Learning Rate + Gradual Unfreezing
@@ -185,10 +226,10 @@ python train_advanced.py --strategy stl_gu_dft --epochs 3 --base_lr 2e-5 --decay
 python verify_finbert_strategies.py
 ```
 
-### 5. Run the Full Test Suite
+### 6. Run the Full Test Suite
 ```bash
-# Run 28 integration, API, ULMFiT, data generator, and invariance tests
-python -m pytest tests/
+# Run 35 integration, audio, fusion, ULMFiT, and invariance tests
+python -m pytest tests/ -v
 
 # Run OCR & optical image restoration verification test
 python test_ocr_pipeline.py
@@ -205,7 +246,12 @@ Virdixt/
 │   ├── linguistic_hedging.py   # Epistemic hedging & Gunning-Fog obfuscation detector
 │   ├── discourse_parser.py     # Rhetorical Structure Theory (RST) Nucleus parser
 │   ├── forensic_accounting.py  # Deterministic Altman Z, Beneish M, Piotroski F
-│   └── fusion.py               # 5-Lane Composite Fusion & institutional rule engine
+│   └── fusion.py               # 6-Lane Composite Fusion & institutional rule engine
+├── audio/                       # Acoustic Forensic Engine (Path #5)
+│   ├── __init__.py             # Module exports
+│   ├── prosody.py              # openSMILE eGeMAPSv02 vocal stress (F0, jitter, shimmer, HNR)
+│   ├── transcribe.py           # faster-whisper INT8 transcriber & turn role classifier
+│   └── dissonance.py           # Cross-Modal Dissonance Index (CMDI) fusion engine
 ├── vision/                      # Optical Restoration, OCR & Chart Processing
 │   ├── image_enhancer.py       # OpenCV CLAHE, bilateral filter, deskew & unsharp
 │   ├── ocr_engine.py           # RapidOCR ONNX engine with geometric layout sorter
@@ -218,14 +264,18 @@ Virdixt/
 │   ├── styles.css              # Custom styling, responsive layout, & active states
 │   ├── app.js                  # Reactive state bridge via sessionStorage & Alpine.js
 │   └── alpine.min.js           # Vendored dependency for 100% offline/air-gapped operation
-├── tests/                       # Automated Test Suite (28 Tests Passing)
+├── tests/                       # Automated Test Suite (35 Tests Passing)
 │   ├── test_advise_integration.py # End-to-end decision advisor tests
 │   ├── test_api.py             # FastAPI REST endpoints test
+│   ├── test_audio_pipeline.py  # Acoustic prosody, CMDI, turn classification & edge cases
 │   ├── test_completeness.py    # Signal completeness badge tests
 │   ├── test_overrides.py       # Safety circuit-breaker override tests
+│   ├── test_verdixt_leaks_and_guardrails.py # Fusion guardrail & data-leak tests
 │   ├── test_finbert_training_strategies.py # ULMFiT schedules (STLR, GU, DFT)
 │   ├── test_data_generators.py # Synthetic & complex sentence injector tests
 │   └── test_laya_neural_invariance.py # ONNX probability calibration & bounds
+├── data/                        # Test Data & Sample Files
+│   └── test_real_speech.wav    # Synthetic benchmark speech for audio pipeline tests
 ├── document_parser.py           # Master multi-format ingestion (PDF, DOCX, XLSX, CSV, IMG)
 ├── server.py                    # Non-blocking FastAPI backend server
 ├── infer.py                     # CLI runtime, FinBERT single-pass ONNX & ERP advisor
@@ -238,8 +288,24 @@ Virdixt/
 ├── eval.py                      # Comprehensive classification report & metrics
 ├── export_onnx.py               # Freezes PyTorch weights into optimized ONNX graph
 ├── test_ocr_pipeline.py         # Verification test suite for degraded scan OCR
-└── requirements.txt             # Core dependencies (Torch, ONNX, OpenCV, RapidOCR)
+└── requirements.txt             # Core dependencies (Torch, ONNX, OpenCV, RapidOCR, openSMILE, faster-whisper)
 ```
+
+---
+
+## 🔧 Core Dependencies
+
+| Category | Packages |
+| :--- | :--- |
+| **Deep Learning & NLP** | `torch`, `transformers`, `accelerate`, `datasets`, `scikit-learn` |
+| **ONNX Inference** | `onnxruntime`, `onnx`, `onnxscript` |
+| **Vision & OCR** | `opencv-python`, `rapidocr-onnxruntime`, `pillow`, `timm` |
+| **Audio & Acoustic Prosody** | `faster-whisper`, `ctranslate2`, `opensmile`, `soundfile`, `scipy` |
+| **Document Ingestion** | `pymupdf`, `python-docx`, `openpyxl`, `pandas` |
+| **Web Server** | `fastapi`, `uvicorn`, `httpx`, `python-multipart` |
+| **Testing** | `pytest` |
+
+See [`requirements.txt`](requirements.txt) for the full pinned dependency list.
 
 ---
 

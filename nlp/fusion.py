@@ -28,6 +28,7 @@ class LaneScores:
     forensic_distress: float = 0.0
     discourse_distress: float = 0.0
     hedging_distress: float = 0.0
+    audio_distress: float = 0.0
 
 
 @dataclass
@@ -47,7 +48,7 @@ class FusionRuleEngine:
     and multi-factor risk calibration.
     """
 
-    # Baseline theoretical weight distribution
+    # Baseline theoretical weight distribution (Text + Forensic)
     BASE_WEIGHTS = {
         "sentiment": 0.30,
         "aspect": 0.25,
@@ -65,6 +66,25 @@ class FusionRuleEngine:
         "hedging": 0.15,
     }
 
+    # 6-Lane Multimodal Audio distributions (incorporating acoustic dissonance)
+    MULTIMODAL_BASE_WEIGHTS = {
+        "sentiment": 0.25,
+        "aspect": 0.20,
+        "forensic": 0.20,
+        "discourse": 0.10,
+        "hedging": 0.10,
+        "audio": 0.15,
+    }
+
+    MULTIMODAL_TEXT_WEIGHTS = {
+        "sentiment": 0.25,
+        "aspect": 0.25,
+        "forensic": 0.00,
+        "discourse": 0.15,
+        "hedging": 0.15,
+        "audio": 0.20,
+    }
+
     @classmethod
     def evaluate_lanes(
         cls,
@@ -74,6 +94,7 @@ class FusionRuleEngine:
         forensic_scores: Optional[ForensicScoreResult],
         discourse_res: Optional[DiscourseAnalysisResult],
         hedging_res: Optional[HedgingAnalysisResult],
+        audio_res: Optional[Any] = None,
     ) -> FusionEvaluation:
         """
         Synthesizes all 5 intelligence lanes into a calibrated institutional verdict.
@@ -149,22 +170,36 @@ class FusionRuleEngine:
             euphemism_adj = min(25.0, len(hedging_res.detected_euphemisms) * 8.0)
             s_hedging = min(100.0, base_hedge + passive_adj + fog_adj + euphemism_adj)
 
+        # Lane 6: Multimodal Acoustic Prosody & Vocal Stress
+        s_audio = 0.0
+        has_audio = audio_res is not None
+        if has_audio:
+            cmdi = getattr(audio_res, "cmdi_score", 0.0)
+            # Map 0-10 CMDI to 0-100 distress score
+            s_audio = min(100.0, float(cmdi) * 20.0)
+
         lane_scores = LaneScores(
             sentiment_distress=s_sentiment,
             aspect_distress=s_aspect,
             forensic_distress=s_forensic,
             discourse_distress=s_discourse,
             hedging_distress=s_hedging,
+            audio_distress=s_audio,
         )
 
         # --- 2. MULTI-FACTOR WEIGHTED FUSION ---
-        weights = cls.BASE_WEIGHTS if has_forensics else cls.TEXT_ONLY_WEIGHTS
+        if has_audio:
+            weights = cls.MULTIMODAL_BASE_WEIGHTS if has_forensics else cls.MULTIMODAL_TEXT_WEIGHTS
+        else:
+            weights = cls.BASE_WEIGHTS if has_forensics else cls.TEXT_ONLY_WEIGHTS
+
         raw_weighted = (
             weights["sentiment"] * s_sentiment
             + weights["aspect"] * s_aspect
             + weights["forensic"] * s_forensic
             + weights["discourse"] * s_discourse
             + weights["hedging"] * s_hedging
+            + (weights.get("audio", 0.0) * s_audio if has_audio else 0.0)
         )
 
         composite_score = raw_weighted
@@ -210,6 +245,25 @@ class FusionRuleEngine:
             if hedging_res.hedging_level in ["EXTREME_EVASION", "HIGH_UNCERTAINTY"] and hedging_res.gunning_fog_index > 16.0:
                 triggered_rules.append("RULE_LINGUISTIC_SMOKESCREEN_ESCALATION")
                 governance_notes.append("High syntactic obfuscation (Fog > 16) combined with extreme epistemic hedging detected.")
+                composite_score += 10.0
+                escalation_applied = True
+
+        # Guardrail 5: Unscripted Acoustic Deception & Dissonance Hard Override
+        if has_audio:
+            cmdi = getattr(audio_res, "cmdi_score", 0.0)
+            tier = getattr(audio_res, "dissonance_tier", "")
+            if tier == "ACUTE_DECEPTION_RISK" or cmdi >= 4.0:
+                triggered_rules.append("RULE_ACUTE_VOCAL_DISSONANCE_VETO")
+                governance_notes.append(
+                    f"Severe cross-modal divergence: Executive displayed acute vocal distress/cognitive hesitation (CMDI {cmdi:.1f}/10.0) while defending position."
+                )
+                composite_score = max(composite_score, 76.0)
+                escalation_applied = True
+            elif tier == "HIGH_DISSONANCE" or cmdi >= 2.5:
+                triggered_rules.append("RULE_HIGH_VOCAL_DISSONANCE_ESCALATION")
+                governance_notes.append(
+                    f"Elevated vocal stress/hesitation detected during unscripted Q&A (CMDI {cmdi:.1f}/10.0)."
+                )
                 composite_score += 10.0
                 escalation_applied = True
 

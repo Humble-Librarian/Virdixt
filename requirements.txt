@@ -48,6 +48,12 @@ rapidocr-onnxruntime==1.4.4
 pyclipper==1.4.0
 shapely==2.2.0
 
+# Multimodal Audio & Acoustic Prosody Subsystem (Path #5)
+faster-whisper==1.2.1
+ctranslate2==4.9.0
+opensmile==2.6.0
+soundfile==0.14.0
+
 # Testing & Quality Assurance
 pytest==9.2.0
 pluggy==1.7.0

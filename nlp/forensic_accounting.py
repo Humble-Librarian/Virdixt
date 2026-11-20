@@ -8,6 +8,7 @@ Calculated deterministically in microseconds with zero external ML dependencies.
 """
 
 import re
+import math
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional
 
@@ -31,13 +32,26 @@ class ForensicAccountingEngine:
     """Computes traditional quantitative accounting metrics from structured financial matrices."""
 
     @staticmethod
-    def _extract_metric(data: Dict[str, float], keywords: list[str], exclude: Optional[list[str]] = None) -> Optional[float]:
+    def _extract_metric(data: Dict[str, Any], keywords: list[str], exclude: Optional[list[str]] = None) -> Optional[float]:
         for k, v in data.items():
-            k_lower = k.lower().replace("_", " ").replace("-", " ")
+            k_lower = str(k).lower().replace("_", " ").replace("-", " ")
             if exclude and any(ex in k_lower for ex in exclude):
                 continue
             if any(kw in k_lower for kw in keywords):
-                return v
+                if v is None:
+                    continue
+                if isinstance(v, (int, float)):
+                    if math.isnan(v) or math.isinf(v):
+                        continue
+                    return float(v)
+                if isinstance(v, str):
+                    cleaned = re.sub(r"[^\d.-]", "", v.strip())
+                    try:
+                        val = float(cleaned)
+                        if not (math.isnan(val) or math.isinf(val)):
+                            return val
+                    except (ValueError, TypeError):
+                        continue
         return None
 
     @classmethod
@@ -91,8 +105,8 @@ class ForensicAccountingEngine:
             x1 = (working_cap or 0) / total_assets
             x2 = (retained_earn or 0) / total_assets
             x3 = (ebit or 0) / total_assets
-            debt_val = max(0.1, total_debt or 0.1)
-            x4 = (equity or 0) / debt_val
+            debt_val = max(1.0, total_debt or 1.0)
+            x4 = min(10.0, max(-10.0, (equity or 0) / debt_val))
             x5 = (rev or 0) / total_assets
 
             z = 1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 0.999 * x5

@@ -176,13 +176,13 @@ class FusionRuleEngine:
 
         # Guardrail 1: Forensic Insolvency / Manipulation Hard Veto
         if has_forensics:
-            if forensic_scores.altman_zone == "DISTRESS":
+            if forensic_scores.altman_zone and forensic_scores.altman_zone.startswith("DISTRESS"):
                 triggered_rules.append("RULE_FORENSIC_ALTMAN_DISTRESS_OVERRIDE")
                 governance_notes.append("Quantitative Altman Z-Score indicates severe insolvency risk (<1.81).")
                 composite_score = max(composite_score, 82.0)
                 escalation_applied = True
 
-            if forensic_scores.beneish_manipulation_risk == "HIGH_MANIPULATION_RISK":
+            if forensic_scores.beneish_manipulation_risk and forensic_scores.beneish_manipulation_risk.startswith("HIGH_MANIPULATION_RISK"):
                 triggered_rules.append("RULE_FORENSIC_BENEISH_MANIPULATION_OVERRIDE")
                 governance_notes.append("Beneish M-Score flagged high probability of financial earnings manipulation (>-1.78).")
                 composite_score = max(composite_score, 78.0)

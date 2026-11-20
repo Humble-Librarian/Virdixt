@@ -49,8 +49,17 @@ class RhetoricalDiscourseParser:
 
     def _quick_sentiment_hint(self, clause: str) -> str:
         """Fast heuristic polarity check for clause classification."""
-        pos_words = {"growth", "grew", "surpassed", "record", "profit", "expansion", "positive", "increased", "gained", "beat"}
-        neg_words = {"decline", "declined", "loss", "losses", "breach", "default", "drain", "surged", "contracted", "headwind", "adverse", "impairment"}
+        pos_words = {
+            "growth", "grew", "surpassed", "record", "profit", "expansion",
+            "positive", "increased", "gained", "beat", "rose", "rise", "rising",
+            "improved", "strong", "outperformed", "profitable",
+        }
+        neg_words = {
+            "decline", "declined", "loss", "losses", "breach", "default",
+            "drain", "surged", "contracted", "headwind", "adverse", "impairment",
+            "negative", "deficit", "exhaustion", "exhausted", "deteriorated",
+            "plunged", "dropped", "insolvency", "burn",
+        }
 
         words = set(re.findall(r"\b[a-z]+\b", clause.lower()))
         pos_match = len(words.intersection(pos_words))

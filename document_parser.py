@@ -34,6 +34,16 @@ class ParsedDocument:
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
             except Exception:
                 pass
+            self.temp_dir = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup()
+
+    def __del__(self):
+        self.cleanup()
 
 
 class DocumentParser:

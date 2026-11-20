@@ -55,6 +55,8 @@ class CrossModalDissonanceEngine:
         """
         Executes complete cross-modal audit on an unscripted executive Q&A response.
         """
+        text_clean = text if (text is not None and isinstance(text, str)) else ""
+
         # 1. Acoustic Prosody & Vocal Stress
         prosody = self.stress_extractor.extract_stress(
             audio_data=audio_data,
@@ -63,17 +65,25 @@ class CrossModalDissonanceEngine:
         )
 
         # 2. Linguistic Hedging & Evasion
-        hedging = self.hedging_detector.analyze(text)
+        hedging = self.hedging_detector.analyze(text_clean)
 
         # 3. Sentiment Probabilities (FinBERT or heuristic fallback)
         if sentiment_probs is None:
-            sentiment_probs = self._estimate_sentiment_heuristic(text)
+            sentiment_probs = self._estimate_sentiment_heuristic(text_clean)
 
-        pos_prob = float(sentiment_probs.get("positive", 0.0))
-        neg_prob = float(sentiment_probs.get("negative", 0.0))
+        pos_prob = float(sentiment_probs.get("positive", 0.0) or 0.0)
+        neg_prob = float(sentiment_probs.get("negative", 0.0) or 0.0)
+        if np.isnan(pos_prob) or np.isinf(pos_prob):
+            pos_prob = 0.0
+        if np.isnan(neg_prob) or np.isinf(neg_prob):
+            neg_prob = 0.0
+        pos_prob = max(0.0, min(1.0, pos_prob))
+        neg_prob = max(0.0, min(1.0, neg_prob))
 
         # 4. Behavioral Hesitation Penalty
         # Normal conversation pause: 0.2 - 0.8s. Severe cognitive stalling: > 2.0s
+        if np.isnan(hesitation_latency) or np.isinf(hesitation_latency) or hesitation_latency < 0.0:
+            hesitation_latency = 0.0
         hesitation_penalty = min(1.0, max(0.0, (hesitation_latency - 1.0) / 2.5))
 
         # 5. Combined Audio-Behavioral Stress (0.0 to 1.0)
@@ -86,6 +96,8 @@ class CrossModalDissonanceEngine:
         # 7. Cross-Modal Dissonance Index (CMDI)
         # CMDI surges when Audio Stress is high AND verbal positivity/hedging is high
         cmdi_raw = audio_stress_normalized * (1.0 + verbal_masking) * 2.5
+        if np.isnan(cmdi_raw) or np.isinf(cmdi_raw):
+            cmdi_raw = 0.0
         cmdi_score = round(float(np.clip(cmdi_raw, 0.0, 10.0)), 2)
 
         # 8. Tier Classification & Forensic Flags
@@ -132,6 +144,8 @@ class CrossModalDissonanceEngine:
         Lightweight heuristic fallback for sentiment when ONNX FinBERT is offline.
         Uses financial lexicon cues.
         """
+        if not text or not isinstance(text, str):
+            return {"negative": 0.20, "neutral": 0.60, "positive": 0.20}
         text_lower = text.lower()
         bullish = ["confident", "strong", "accelerating", "momentum", "robust", "optimistic", "growth", "record", "exceeding"]
         bearish = ["decline", "pressure", "headwinds", "challenging", "slowdown", "deterioration", "deficit", "covenant", "impairment"]

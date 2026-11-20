@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Model-FinBERT-blue?style=for-the-badge&logo=huggingface" />
   <img src="https://img.shields.io/badge/Negative_Recall-89.66%25-brightgreen?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Macro_F1-0.8926-brightgreen?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Tests-35%20Passed-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Tests-65%20Passed-brightgreen?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Runtime-ONNX_%2B_FastAPI-purple?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Formats-PDF_%7C_DOCX_%7C_XLSX_%7C_CSV_%7C_IMG_%7C_WAV-orange?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
@@ -159,7 +159,7 @@ Actual positive:      20             19            316 ✅
 | **Acoustic Prosody (openSMILE)** | — | **<50 ms / segment** | — | openSMILE eGeMAPSv02 C++ extraction (<30 MB RAM), speaker baseline enrollment, Z-score normalization. |
 | **Whisper Transcription (INT8)** | — | **~2–4 s / minute** | — | faster-whisper `small.en` CTranslate2 INT8 on AVX2, Silero VAD, numpy-based audio decoding (no PyAV). |
 | **Total End-to-End Audit Latency** | **~2,800 – 3,500 ms** | **358.17 ms** | **~8.5x – 10.0x Faster 🚀** | Full multi-lane text audit pipeline execution from raw text/file to ERP action directive. |
-| **Automated Test Suite (`pytest`)** | 66.33 seconds (14 tests) | **7.40 seconds (35 tests)** | **100% Pass Rate ⚡** | Modular unit/integration fixtures covering ULMFiT schedules, synthetic generators, audio prosody, CMDI, and ONNX invariants. |
+| **Automated Test Suite (`pytest`)** | 66.33 seconds (14 tests) | **48.26 seconds (65 tests)** | **100% Pass Rate ⚡** | Modular unit/integration fixtures covering ULMFiT schedules, synthetic generators, audio prosody, CMDI, strict forensics, and ONNX invariants. |
 | **Peak Runtime Memory Footprint** | ~850 MB – 1.1 GB | **~750 MB Peak (with audio)** | **~30% Less RAM 💾** | ONNX Runtime + CTranslate2 INT8 graph optimizations + zero-tax lazy OCR loading. |
 
 ---
@@ -228,7 +228,7 @@ python verify_finbert_strategies.py
 
 ### 6. Run the Full Test Suite
 ```bash
-# Run 35 integration, audio, fusion, ULMFiT, and invariance tests
+# Run all 65 integration, audio, fusion, ULMFiT, and invariance tests
 python -m pytest tests/ -v
 
 # Run OCR & optical image restoration verification test
@@ -264,10 +264,11 @@ Virdixt/
 │   ├── styles.css              # Custom styling, responsive layout, & active states
 │   ├── app.js                  # Reactive state bridge via sessionStorage & Alpine.js
 │   └── alpine.min.js           # Vendored dependency for 100% offline/air-gapped operation
-├── tests/                       # Automated Test Suite (35 Tests Passing)
+├── tests/                       # Automated Test Suite (65 Tests Passing)
 │   ├── test_advise_integration.py # End-to-end decision advisor tests
 │   ├── test_api.py             # FastAPI REST endpoints test
 │   ├── test_audio_pipeline.py  # Acoustic prosody, CMDI, turn classification & edge cases
+│   ├── test_audio_strict_forensics.py # Adversarial acoustic, NaN/Inf, and fusion parity tests
 │   ├── test_completeness.py    # Signal completeness badge tests
 │   ├── test_overrides.py       # Safety circuit-breaker override tests
 │   ├── test_verdixt_leaks_and_guardrails.py # Fusion guardrail & data-leak tests

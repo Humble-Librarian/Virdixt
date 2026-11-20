@@ -187,7 +187,14 @@ class AcousticStressExtractor:
                 # Ensure float32 mono array
                 sig = np.asarray(audio_data, dtype=np.float32)
                 if sig.ndim > 1:
-                    sig = np.mean(sig, axis=-1)
+                    # Smart multi-channel reduction: average across channel dimension
+                    if sig.shape[0] < sig.shape[-1]:
+                        sig = np.mean(sig, axis=0)
+                    else:
+                        sig = np.mean(sig, axis=-1)
+                sig = np.squeeze(sig)
+                if sig.ndim != 1 or len(sig) == 0:
+                    raise ValueError("Audio signal must be a non-empty 1D array")
                 df = self._smile.process_signal(sig, sampling_rate)
 
             # Safely extract and sanitize NaNs to 0.0

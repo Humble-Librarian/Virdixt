@@ -174,9 +174,12 @@ class FusionRuleEngine:
         s_audio = 0.0
         has_audio = audio_res is not None
         if has_audio:
-            cmdi = getattr(audio_res, "cmdi_score", 0.0)
+            if isinstance(audio_res, dict):
+                cmdi = audio_res.get("cmdi_score", 0.0)
+            else:
+                cmdi = getattr(audio_res, "cmdi_score", 0.0)
             # Map 0-10 CMDI to 0-100 distress score
-            s_audio = min(100.0, float(cmdi) * 20.0)
+            s_audio = min(100.0, float(cmdi or 0.0) * 20.0)
 
         lane_scores = LaneScores(
             sentiment_distress=s_sentiment,
@@ -250,8 +253,12 @@ class FusionRuleEngine:
 
         # Guardrail 5: Unscripted Acoustic Deception & Dissonance Hard Override
         if has_audio:
-            cmdi = getattr(audio_res, "cmdi_score", 0.0)
-            tier = getattr(audio_res, "dissonance_tier", "")
+            if isinstance(audio_res, dict):
+                cmdi = float(audio_res.get("cmdi_score", 0.0) or 0.0)
+                tier = str(audio_res.get("dissonance_tier", "") or "")
+            else:
+                cmdi = float(getattr(audio_res, "cmdi_score", 0.0) or 0.0)
+                tier = str(getattr(audio_res, "dissonance_tier", "") or "")
             if tier == "ACUTE_DECEPTION_RISK" or cmdi >= 4.0:
                 triggered_rules.append("RULE_ACUTE_VOCAL_DISSONANCE_VETO")
                 governance_notes.append(

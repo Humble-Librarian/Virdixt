@@ -72,6 +72,7 @@ class EarningsCallTranscriber:
     def transcribe(
         self,
         audio_source: Union[str, np.ndarray],
+        sampling_rate: int = 16000,
         beam_size: int = 3,
         word_timestamps: bool = True,
     ) -> List[TurnSegment]:
@@ -79,11 +80,18 @@ class EarningsCallTranscriber:
         Transcribes audio source and parses Q&A dialogue turns with hesitation latencies.
         Accepts either an audio filepath (WAV/MP3/FLAC) or raw 1D/2D float32 numpy array.
         """
+        import os
         # Senior Architect: Normalize audio to 16kHz float32 mono array to bypass PyAV version incompatibilities
         if isinstance(audio_source, str):
+            if not os.path.exists(audio_source):
+                raise FileNotFoundError(f"Audio file not found: {audio_source}")
             sig, sr = sf.read(audio_source, dtype="float32")
             if sig.ndim > 1:
-                sig = np.mean(sig, axis=-1)
+                if sig.shape[0] < sig.shape[-1]:
+                    sig = np.mean(sig, axis=0)
+                else:
+                    sig = np.mean(sig, axis=-1)
+            sig = np.squeeze(sig)
             if sr != 16000:
                 g = gcd(16000, sr)
                 sig = sps.resample_poly(sig, 16000 // g, sr // g)
@@ -91,7 +99,15 @@ class EarningsCallTranscriber:
         else:
             audio_array = np.asarray(audio_source, dtype=np.float32)
             if audio_array.ndim > 1:
-                audio_array = np.mean(audio_array, axis=-1)
+                if audio_array.shape[0] < audio_array.shape[-1]:
+                    audio_array = np.mean(audio_array, axis=0)
+                else:
+                    audio_array = np.mean(audio_array, axis=-1)
+            audio_array = np.squeeze(audio_array)
+            if sampling_rate != 16000 and len(audio_array) > 0:
+                g = gcd(16000, sampling_rate)
+                audio_array = sps.resample_poly(audio_array, 16000 // g, sampling_rate // g)
+            audio_array = np.asarray(audio_array, dtype=np.float32)
 
         model = self._get_model()
         segments_gen, info = model.transcribe(
